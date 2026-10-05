@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta name="color-scheme" content="dark light" />
+    <title>FretLab — interactive guitar &amp; bass fretboard</title>
+    <meta
+      name="description"
+      content="An interactive fretboard for guitar and bass: any tuning, scales and modes, calculated chord voicings, strumming and a chromatic tuner. Runs entirely in the browser."
+    />
+    <meta name="theme-color" content="#14181f" />
+
+    <!-- Noto Sans is the interface typeface throughout. Loaded with a
+         preconnect so first paint is not held up, and with a system-font
+         fallback stack in the CSS for when Google Fonts is unreachable. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Sans+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23161b23'/%3E%3Cg stroke='%23e0a44a' stroke-width='1.6'%3E%3Cpath d='M5 9h22M5 16h22M5 23h22'/%3E%3C/g%3E%3Cg stroke='%236f7b8c' stroke-width='2'%3E%3Cpath d='M11 5v22M20 5v22'/%3E%3C/g%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      FretLab is an interactive instrument, so it needs JavaScript enabled to draw the fretboard and
+      generate sound.
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

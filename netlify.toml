@@ -1,0 +1,8 @@
+# Netlify free tier. Drag-and-drop of the dist/ folder also works with no
+# configuration at all.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"

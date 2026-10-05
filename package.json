@@ -1,0 +1,34 @@
+{
+  "name": "fretlab",
+  "private": true,
+  "version": "1.0.0",
+  "description": "FretLab - interactive guitar & bass fretboard, scales, chords, strumming and chromatic tuner.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "report": "pandoc docs/report.md -o docs/FretLab-report.docx --toc --toc-depth=2 && pandoc docs/report.md -o docs/report.html --standalone --toc --toc-depth=2 --css=report.css --embed-resources && node tools/make-pdf.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "jsdom": "^29.1.1",
+    "playwright": "^1.63.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4"
+  }
+}
