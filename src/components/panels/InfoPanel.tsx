@@ -18,6 +18,7 @@ export function InfoPanel() {
   const mode = useStore((s) => s.mode);
   const scaleRoot = useStore((s) => s.scaleRoot);
   const chordRoot = useStore((s) => s.chordRoot);
+  const a4 = useStore((s) => s.a4);
 
   const selectedMidi =
     selected === null ? null : ctx.openMidis[selected.stringIndex] + selected.fret;
@@ -37,7 +38,7 @@ export function InfoPanel() {
               <>
                 String {ctx.instrument.stringCount - selected.stringIndex} ·{' '}
                 {selected.fret === 0 ? 'open' : `fret ${selected.fret}`} ·{' '}
-                {midiToFreq(selectedMidi).toFixed(2)} Hz · MIDI {selectedMidi}
+                {midiToFreq(selectedMidi, a4).toFixed(2)} Hz · MIDI {selectedMidi}
               </>
             ) : (
               'Click or tap anywhere on the fretboard to hear a note.'

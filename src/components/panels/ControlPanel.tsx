@@ -17,12 +17,15 @@ import { FAMILIES, getInstrument, instrumentsOfFamily } from '../../core/instrum
 import { midiToNote, noteNameToMidi } from '../../core/theory/pitch';
 
 export function ControlPanel() {
+  const mode = useStore((s) => s.mode);
+  // The scale and chord choosers only appear once they are what you are
+  // looking at, so the Notes and Tuner views stay uncluttered.
   return (
     <>
       <InstrumentCard />
       <TuningCard />
-      <ScaleCard />
-      <ChordCard />
+      {(mode === 'scale' || mode === 'chord') && <ScaleCard />}
+      {mode === 'chord' && <ChordCard />}
     </>
   );
 }
@@ -216,8 +219,6 @@ function ScaleCard() {
   const scaleId = useStore((s) => s.scaleId);
   const setScaleRoot = useStore((s) => s.setScaleRoot);
   const setScaleId = useStore((s) => s.setScaleId);
-  const mode = useStore((s) => s.mode);
-  const setMode = useStore((s) => s.setMode);
   const scale = getScale(scaleId);
 
   const scaleOptions: Option[] = SCALE_CATEGORIES.flatMap((cat) =>
@@ -232,13 +233,6 @@ function ScaleCard() {
     <Card
       title="Scale / mode"
       id="scale"
-      action={
-        mode !== 'scale' ? (
-          <button type="button" className="btn btn-sm btn-ghost" onClick={() => setMode('scale')}>
-            Show on fretboard
-          </button>
-        ) : undefined
-      }
     >
       <Field label="Root note" help="The root also decides the spelling: pick Bb for flat keys, F# for sharp keys.">
         {({ id, describedBy, labelledBy }) => (

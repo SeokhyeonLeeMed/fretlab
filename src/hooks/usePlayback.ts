@@ -36,10 +36,12 @@ export function usePlayback(): PlaybackApi {
   const volume = useStore((s) => s.volume);
   const strumMode = useStore((s) => s.strumMode);
   const strumMs = useStore((s) => s.strumMs);
+  const a4 = useStore((s) => s.a4);
 
   const [status, setStatus] = useState(() => audioEngine.status);
   useEffect(() => audioEngine.subscribe(setStatus), []);
   useEffect(() => audioEngine.setVolume(volume), [volume]);
+  useEffect(() => audioEngine.setA4(a4), [a4]);
 
   const family = ctx.instrument.family;
   const gauges = ctx.instrument.stringGauges;

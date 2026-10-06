@@ -48,6 +48,7 @@ export class AudioEngine {
   private buffers = new Map<string, AudioBuffer>();
   private active = new Set<AudioBufferSourceNode>();
   private volume = 0.75;
+  private a4 = 440;
   private error: string | null = null;
   private listeners = new Set<Listener>();
 
@@ -176,16 +177,24 @@ export class AudioEngine {
     return this.volume;
   }
 
+  /** Concert pitch. Changing it clears the note cache, since every rendered
+   *  note was synthesised at the old reference. */
+  setA4(hz: number): void {
+    if (hz === this.a4) return;
+    this.a4 = hz;
+    this.buffers.clear();
+  }
+
   private bufferFor(midi: number, family: ToneFamily, brightness: number): AudioBuffer {
     const ctx = this.ctx!;
     const bKey = Math.round(brightness * 4) / 4; // quantise so the cache hits
-    const key = `${family}:${midi}:${bKey}:${ctx.sampleRate}`;
+    const key = `${family}:${midi}:${bKey}:${ctx.sampleRate}:${this.a4}`;
     const hit = this.buffers.get(key);
     if (hit) return hit;
 
     const samples = renderPluck({
       sampleRate: ctx.sampleRate,
-      freq: midiToFreq(midi),
+      freq: midiToFreq(midi, this.a4),
       family,
       brightness: bKey,
       seed: midi * 2654435761,

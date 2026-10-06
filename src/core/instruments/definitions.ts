@@ -16,7 +16,11 @@ export interface InstrumentDef {
   shortName: string;
   family: InstrumentFamily;
   stringCount: number;
-  /** Number of frets drawn on the neck. */
+  /**
+   * Number of frets drawn on the neck. Every instrument in a family shares
+   * one value, so a 7-string guitar has the same neck and the same reach as a
+   * 6-string; only the string spacing differs.
+   */
   fretCount: number;
   /** id of the tuning preset used when the instrument is first selected. */
   defaultTuningId: string;
@@ -118,7 +122,7 @@ export const INSTRUMENTS: InstrumentDef[] = [
     shortName: 'Guitar 7',
     family: 'guitar',
     stringCount: 7,
-    fretCount: 24,
+    fretCount: 22,
     defaultTuningId: 'standard',
     tunings: GUITAR7_TUNINGS,
     stringGauges: [1.12, 1.0, 0.86, 0.72, 0.58, 0.46, 0.36],
@@ -138,7 +142,7 @@ export const INSTRUMENTS: InstrumentDef[] = [
     shortName: 'Bass 4',
     family: 'bass',
     stringCount: 4,
-    fretCount: 21,
+    fretCount: 20,
     defaultTuningId: 'standard',
     tunings: BASS4_TUNINGS,
     stringGauges: [1.45, 1.22, 1.02, 0.84],
@@ -158,7 +162,7 @@ export const INSTRUMENTS: InstrumentDef[] = [
     shortName: 'Bass 5',
     family: 'bass',
     stringCount: 5,
-    fretCount: 22,
+    fretCount: 20,
     defaultTuningId: 'standard',
     tunings: BASS5_TUNINGS,
     stringGauges: [1.62, 1.45, 1.22, 1.02, 0.84],

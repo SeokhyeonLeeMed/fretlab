@@ -80,10 +80,13 @@ describe('the application renders and is navigable', () => {
 
 describe('switching instruments reconfigures everything', () => {
   it.each([
+    // Every instrument in a family has the same neck, so the same number of
+    // positions per string: 22 frets plus the open string for guitars, 20 for
+    // basses.
     ['Guitar', 6, '6-string guitar', 6, 23, 'E2, string 6, open'],
-    ['Guitar', 7, '7-string guitar', 7, 25, 'B1, string 7, open'],
-    ['Bass', 4, '4-string bass', 4, 22, 'E1, string 4, open'],
-    ['Bass', 5, '5-string bass', 5, 23, 'B0, string 5, open'],
+    ['Guitar', 7, '7-string guitar', 7, 23, 'B1, string 7, open'],
+    ['Bass', 4, '4-string bass', 4, 21, 'E1, string 4, open'],
+    ['Bass', 5, '5-string bass', 5, 21, 'B0, string 5, open'],
   ] as const)('%s %s-string shows %s', (family, count, label, strings, positions, lowestOpen) => {
     render(<App />);
     chooseInstrument(family, count);
@@ -234,6 +237,73 @@ describe('the custom tuning editor', () => {
   });
 });
 
+describe('the control panel follows the mode', () => {
+  const comboNames = (): string[] =>
+    screen.getAllByRole('combobox').map((el) => el.getAttribute('aria-labelledby') ?? '');
+
+  it('hides the scale and chord choosers in Notes mode', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    expect(screen.queryByText('Scale / mode')).toBeNull();
+    expect(screen.queryByText('Chord')).toBeNull();
+    // The instrument and tuning choosers stay.
+    expect(screen.getByRole('group', { name: 'Type' })).toBeTruthy();
+    expect(selectNamed(/Preset/i)).toBeTruthy();
+    expect(comboNames().length).toBe(1);
+  });
+
+  it('shows the scale chooser in Scale mode and the chord chooser in Chord mode', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Scale' }));
+    expect(screen.getByText('Scale / mode')).toBeTruthy();
+    expect(selectsNamed(/Root note/i)).toHaveLength(1);
+    expect(screen.queryByLabelText(/Chord type/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Chords' }));
+    expect(screen.getByText('Scale / mode')).toBeTruthy();
+    expect(selectNamed(/Chord type/i)).toBeTruthy();
+    expect(selectsNamed(/Root note/i)).toHaveLength(2);
+  });
+
+  it('hides them again in Tuner mode', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Tuner' }));
+    expect(screen.queryByText('Scale / mode')).toBeNull();
+  });
+});
+
+describe('reference pitch', () => {
+  it('retunes the whole application', () => {
+    render(<App />);
+    // A4 = 440 by default: the open low E is 82.41 Hz.
+    fireEvent.pointerDown(cell('E2, string 6, open'));
+    const tile = (): string =>
+      screen.getByText('Selected note').closest('.info-tile')?.textContent ?? '';
+    expect(tile()).toContain('82.41 Hz');
+
+    act(() => useStore.getState().setA4(432));
+    expect(tile()).toContain('80.91 Hz');
+    act(() => useStore.getState().setA4(415));
+    expect(tile()).toContain('77.72 Hz');
+  });
+
+  it('is offered as presets and is remembered', () => {
+    const { unmount } = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: '432 Hz' }));
+    expect(useStore.getState().a4).toBe(432);
+    unmount();
+    expect(JSON.parse(localStorage.getItem('fretlab.settings.v1') ?? '{}').state.a4).toBe(432);
+  });
+
+  it('stays within a sensible range', () => {
+    render(<App />);
+    act(() => useStore.getState().setA4(100));
+    expect(useStore.getState().a4).toBe(392);
+    act(() => useStore.getState().setA4(1000));
+    expect(useStore.getState().a4).toBe(466);
+  });
+});
+
 describe('scale mode', () => {
   it('highlights the selected scale and names it', () => {
     render(<App />);
@@ -342,6 +412,7 @@ describe('chord mode', () => {
 
   it('offers scales that fit the chord, and keeps the two concepts distinct', () => {
     render(<App />);
+    openChords();
     expect(screen.getByText(/Scales that fit Em/i)).toBeTruthy();
     expect(screen.getByText(/switches the fretboard to that/i)).toBeTruthy();
     // Clicking a suggestion moves to scale mode with that scale selected.

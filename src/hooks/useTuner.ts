@@ -43,8 +43,9 @@ export function useTunerLifecycle(): void {
     }
     // Search only the range the instrument can actually produce, which keeps
     // the detector away from room rumble and from harmonics up high.
-    const lowest = midiToFreq(Math.min(...ctx.openMidis));
-    const highest = midiToFreq(Math.max(...ctx.openMidis) + ctx.fretCount);
+    const a4 = useStore.getState().a4;
+    const lowest = midiToFreq(Math.min(...ctx.openMidis), a4);
+    const highest = midiToFreq(Math.max(...ctx.openMidis) + ctx.fretCount, a4);
     tunerEngine.setRange(Math.max(20, lowest * 0.6), Math.min(2000, highest * 1.2));
     void tunerEngine.start(audioEngine.context);
     return () => tunerEngine.stop();
@@ -64,6 +65,7 @@ export function useTunerReadings(): TunerReadings {
   const snapshot = useTunerSnapshot();
   const ctx = useMusicContext();
   const pinned = useStore((s) => s.tunerStringIndex);
+  const a4 = useStore((s) => s.a4);
 
   return useMemo(() => {
     const freq = snapshot.pitch?.freq ?? null;
@@ -78,11 +80,11 @@ export function useTunerReadings(): TunerReadings {
         })),
       };
     }
-    const chromatic = chromaticReading(freq, ctx.spelling);
+    const chromatic = chromaticReading(freq, ctx.spelling, a4);
     const string =
       pinned === null
-        ? nearestStringReading(freq, ctx.openMidis, ctx.spelling, { names: ctx.tuning.notes })
-        : readingForString(freq, ctx.openMidis, pinned, ctx.spelling, { names: ctx.tuning.notes });
+        ? nearestStringReading(freq, ctx.openMidis, ctx.spelling, { names: ctx.tuning.notes, a4 })
+        : readingForString(freq, ctx.openMidis, pinned, ctx.spelling, { names: ctx.tuning.notes, a4 });
 
     return {
       snapshot,
@@ -98,5 +100,5 @@ export function useTunerReadings(): TunerReadings {
             : ('idle' as const),
       })),
     };
-  }, [snapshot, ctx.openMidis, ctx.spelling, ctx.tuning.notes, pinned]);
+  }, [snapshot, ctx.openMidis, ctx.spelling, ctx.tuning.notes, pinned, a4]);
 }

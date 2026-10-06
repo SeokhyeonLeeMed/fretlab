@@ -47,21 +47,52 @@ export function rmsOf(buf: Float32Array): number {
  */
 export function decimate(buf: Float32Array, factor: number): Float32Array {
   if (factor <= 1) return buf;
-  const STAGES = 4;
-  // Pull the corner below the new Nyquist to leave room for the roll-off.
-  const a = Math.min(1, 0.7 / factor);
-  const filtered = new Float32Array(buf);
-  for (let stage = 0; stage < STAGES; stage++) {
-    let lp = 0;
-    for (let i = 0; i < filtered.length; i++) {
-      lp += a * (filtered[i] - lp);
-      filtered[i] = lp;
-    }
-  }
+  // A windowed-sinc low-pass, evaluated only at the samples that are kept.
+  //
+  // The corner has to sit just under the new Nyquist. A gentle one-pole
+  // cascade cannot do that: placed low enough to stop aliasing it also eats
+  // the notes being looked for, which leaves the lowest string detectable and
+  // everything above it too weak. A 41-tap Hamming-windowed sinc passes the
+  // whole playing range and still puts the stopband about 50 dB down, and
+  // because it is only evaluated at the retained samples it costs less than
+  // the filter it replaces.
+  const taps = decimationTaps(factor);
+  const half = (taps.length - 1) / 2;
   const n = Math.floor(buf.length / factor);
   const out = new Float32Array(n);
-  for (let i = 0; i < n; i++) out[i] = filtered[i * factor];
+  for (let i = 0; i < n; i++) {
+    const centre = i * factor;
+    let acc = 0;
+    for (let k = 0; k < taps.length; k++) {
+      const j = centre + k - half;
+      if (j >= 0 && j < buf.length) acc += buf[j] * taps[k];
+    }
+    out[i] = acc;
+  }
   return out;
+}
+
+const tapCache = new Map<number, Float32Array>();
+
+/** Hamming-windowed sinc, cutoff at 0.45 of the decimated sample rate's Nyquist. */
+function decimationTaps(factor: number): Float32Array {
+  const hit = tapCache.get(factor);
+  if (hit) return hit;
+  const N = 41;
+  const half = (N - 1) / 2;
+  const fc = 0.45 / factor; // cycles per input sample
+  const h = new Float32Array(N);
+  let sum = 0;
+  for (let i = 0; i < N; i++) {
+    const m = i - half;
+    const sinc = m === 0 ? 2 * fc : Math.sin(2 * Math.PI * fc * m) / (Math.PI * m);
+    const w = 0.54 - 0.46 * Math.cos((2 * Math.PI * i) / (N - 1));
+    h[i] = sinc * w;
+    sum += h[i];
+  }
+  for (let i = 0; i < N; i++) h[i] /= sum;
+  tapCache.set(factor, h);
+  return h;
 }
 
 /** NSDF over a lag range. Values run -1..1; 1 means perfectly periodic. */
@@ -129,9 +160,27 @@ export function detectPitch(
   if (rms < rmsThreshold) return null;
 
   // Stage 1: decimate so the NSDF is cheap.
-  const factor = Math.max(1, Math.floor(sampleRate / (4 * maxFreq)));
+  //
+  // The decimated rate is also bounded from below. Deriving it from maxFreq
+  // alone is wrong for an instrument with a low top note: a bass asking for
+  // 373 Hz would decimate to 1500 Hz, at which a low G's period is only
+  // fifteen samples and the NSDF can no longer tell the true period from its
+  // multiples -- which reads one or two octaves low. Keeping at least
+  // MIN_DECIMATED_RATE leaves every period comfortably resolved.
+  const MIN_DECIMATED_RATE = 6000;
+  const factor = Math.max(
+    1,
+    Math.min(
+      Math.floor(sampleRate / (4 * maxFreq)),
+      Math.floor(sampleRate / MIN_DECIMATED_RATE),
+    ),
+  );
   const low = decimate(buf, factor);
   const lowRate = sampleRate / factor;
+  // If almost nothing survived the band-limiting, the signal's periodic
+  // content lies outside the range this instrument can produce, and any
+  // period found below would be an artefact of it.
+  if (rmsOf(low) < Math.max(rmsThreshold * 0.5, rms * 0.1)) return null;
 
   const minLag = Math.max(2, Math.floor(lowRate / maxFreq));
   const maxLag = Math.min(Math.floor(lowRate / minFreq), Math.floor(low.length / 2) - 1);
@@ -139,15 +188,19 @@ export function detectPitch(
 
   const curve = nsdf(low, minLag, maxLag);
 
-  // Collect local maxima after the function has first come back up through
-  // zero, then take the earliest peak that is nearly as tall as the tallest.
-  // Taking the tallest outright is what produces octave-down errors.
-  let searchFrom = minLag;
-  while (searchFrom < maxLag && curve[searchFrom] > 0) searchFrom++;
-
+  // Collect every local maximum in range, then take the earliest that comes
+  // close to the tallest.
+  //
+  // An earlier version first skipped forward while the curve stayed positive,
+  // meaning to step over the peak at lag zero. But a strongly periodic signal
+  // -- which is exactly what a plucked string is -- keeps the NSDF positive
+  // well past its first period, so the skip stepped over the true period too
+  // and the detector locked onto the second or third lap instead, an octave
+  // or more low. Starting the search at minLag already excludes lag zero,
+  // because minLag is set by the highest frequency of interest.
   let tallest = -Infinity;
   const peaks: number[] = [];
-  for (let lag = Math.max(minLag + 1, searchFrom); lag < maxLag; lag++) {
+  for (let lag = minLag + 1; lag < maxLag; lag++) {
     if (curve[lag] > curve[lag - 1] && curve[lag] >= curve[lag + 1] && curve[lag] > 0) {
       peaks.push(lag);
       if (curve[lag] > tallest) tallest = curve[lag];
@@ -155,8 +208,39 @@ export function detectPitch(
   }
   if (peaks.length === 0 || tallest < clarityThreshold) return null;
 
-  const cutoff = tallest * 0.88;
-  const coarseLag = peaks.find((l) => curve[l] >= cutoff) ?? peaks[0];
+  // Accept the earliest peak that comes close to the tallest. The threshold
+  // is a balance: too high and a real pluck's second lap of the delay line
+  // wins, which reads an octave low; too low and a strong second harmonic
+  // wins, which reads an octave high. 0.85 holds both off across the whole
+  // range of both instruments.
+  let coarseLag = peaks.find((l) => curve[l] >= tallest * 0.85) ?? peaks[0];
+
+  // Octave check. A periodic signal peaks at its period and at every multiple
+  // of it, and which of those is tallest depends on the harmonics, so a
+  // threshold alone cannot settle it: a low B's true period scores 0.78 where
+  // twice that period scores 0.95. So ask directly whether some whole
+  // fraction of the chosen period explains the signal nearly as well, and if
+  // it does, prefer the shorter one. Repeating this walks all the way down to
+  // the true period.
+  for (let guard = 0; guard < 4; guard++) {
+    let moved = false;
+    for (const d of [2, 3, 4, 5]) {
+      const target = coarseLag / d;
+      if (target < minLag) continue;
+      let cand = -1;
+      for (const l of peaks) {
+        if (Math.abs(l - target) <= Math.max(1, target * 0.04)) {
+          if (cand < 0 || curve[l] > curve[cand]) cand = l;
+        }
+      }
+      if (cand > 0 && curve[cand] >= curve[coarseLag] * 0.75) {
+        coarseLag = cand;
+        moved = true;
+        break;
+      }
+    }
+    if (!moved) break;
+  }
   const clarity = curve[coarseLag];
 
   // Stage 2: refine at the original sample rate.

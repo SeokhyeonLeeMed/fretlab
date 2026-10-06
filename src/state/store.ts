@@ -58,6 +58,8 @@ export interface AppState {
   theme: Theme;
 
   volume: number;
+  /** Concert pitch in Hz: what A4 is tuned to. */
+  a4: number;
   strumMode: StrumMode;
   strumPreset: StrumPreset;
   strumMs: number;
@@ -90,6 +92,7 @@ export interface AppState {
   setZoom: (z: number) => void;
   setTheme: (t: Theme) => void;
   setVolume: (v: number) => void;
+  setA4: (hz: number) => void;
   setStrumMode: (m: StrumMode) => void;
   setStrumPreset: (p: StrumPreset) => void;
   setStrumMs: (ms: number) => void;
@@ -122,6 +125,7 @@ const DEFAULTS = {
   zoom: 1,
   theme: 'dark' as Theme,
   volume: 0.75,
+  a4: 440,
   strumMode: 'down' as StrumMode,
   strumPreset: 'normal' as StrumPreset,
   strumMs: STRUM_PRESETS.normal,
@@ -193,6 +197,7 @@ export const useStore = create<AppState>()(
       setTheme: (theme) => set({ theme }),
 
       setVolume: (v) => set({ volume: Math.min(1, Math.max(0, v)) }),
+      setA4: (hz) => set({ a4: Math.min(466, Math.max(392, hz)) }),
       setStrumMode: (strumMode) => set({ strumMode }),
       setStrumPreset: (p) =>
         set(p === 'custom' ? { strumPreset: p } : { strumPreset: p, strumMs: STRUM_PRESETS[p] }),
@@ -227,6 +232,7 @@ export const useStore = create<AppState>()(
         zoom: s.zoom,
         theme: s.theme,
         volume: s.volume,
+        a4: s.a4,
         strumMode: s.strumMode,
         strumPreset: s.strumPreset,
         strumMs: s.strumMs,

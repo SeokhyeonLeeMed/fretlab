@@ -21,6 +21,8 @@ export function AudioControls() {
   const zoom = useStore((s) => s.zoom);
   const setZoom = useStore((s) => s.setZoom);
   const reset = useStore((s) => s.reset);
+  const a4 = useStore((s) => s.a4);
+  const setA4 = useStore((s) => s.setA4);
 
   const { audioError, stop } = usePlayback();
   const canPersist = useMemo(storageAvailable, []);
@@ -44,6 +46,31 @@ export function AudioControls() {
         onChange={setVolume}
         format={(v) => `${Math.round(v * 100)}%`}
       />
+
+      <Slider
+        label="Reference pitch"
+        min={392}
+        max={466}
+        step={1}
+        value={a4}
+        onChange={setA4}
+        format={(v) => `A4 = ${v} Hz`}
+        help="Concert pitch. Everything follows it: the notes you play, the tuner's targets and the frequencies shown. 440 Hz is standard; 432 and 415 Hz are also used."
+      />
+      <div className="chip-row" style={{ marginTop: -4, marginBottom: 12 }}>
+        {[415, 432, 440, 442].map((hz) => (
+          <button
+            key={hz}
+            type="button"
+            className="chip"
+            aria-pressed={a4 === hz}
+            style={a4 === hz ? { borderColor: 'var(--accent)', color: 'var(--text)' } : undefined}
+            onClick={() => setA4(hz)}
+          >
+            {hz} Hz
+          </button>
+        ))}
+      </div>
 
       <Slider
         label="Fretboard zoom"

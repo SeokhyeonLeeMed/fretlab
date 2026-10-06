@@ -11,7 +11,7 @@ import {
 import { buildSpellingMap } from '../core/theory/spelling';
 import { midiToFreq, noteNameToMidi } from '../core/theory/pitch';
 import { renderPluck } from '../core/audio/pluck';
-import { getInstrument, getTuning } from '../core/instruments/definitions';
+import { INSTRUMENTS, getInstrument, getTuning } from '../core/instruments/definitions';
 import { tuningMidis } from '../core/theory/fretboard';
 
 const SR = 48000;
@@ -102,6 +102,36 @@ describe('frequency -> note detection', () => {
       const reading = readingForString(r.freq, [noteNameToMidi('E2')], 0, MAP)!;
       expect(reading.cents).toBeCloseTo(cents, 0);
     }
+  });
+
+  it('detects every open string of every tuning preset, as a real pluck', () => {
+    // The broadest guard in the suite: each open string of every preset of
+    // every instrument, synthesised by the same model the app plays through,
+    // and analysed over the range that instrument asks the tuner for. Octave
+    // errors are what this catches -- they are the characteristic failure of
+    // pitch detection, and they do not show up on a handful of sine waves.
+    let worst = 0;
+    let checked = 0;
+    for (const inst of INSTRUMENTS) {
+      for (const tuning of inst.tunings) {
+        const open = tuningMidis(tuning);
+        const maxFreq = Math.min(2000, midiToFreq(Math.max(...open) + inst.fretCount) * 1.2);
+        for (const midi of open) {
+          const freq = midiToFreq(midi);
+          const pluck = renderPluck({ sampleRate: SR, freq, family: inst.family });
+          const start = Math.round(SR * 0.09);
+          const r = detectPitch(pluck.subarray(start, start + 8192), SR, { minFreq: 25, maxFreq });
+          const where = `${inst.shortName} ${tuning.id} ${midi}`;
+          expect(r, where).not.toBeNull();
+          const off = Math.abs(centsOff(r!.freq, freq));
+          expect(off, where).toBeLessThan(15);
+          worst = Math.max(worst, off);
+          checked++;
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(150);
+    expect(worst).toBeLessThan(15);
   });
 
   it('stays silent on silence and on noise', () => {
