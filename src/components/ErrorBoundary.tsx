@@ -7,6 +7,8 @@
  */
 
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { translate } from '../i18n';
+import { useStore, type Locale } from '../state/store';
 
 interface Props {
   children: ReactNode;
@@ -18,6 +20,18 @@ interface State {
 
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
+
+  /**
+   * Read once, directly from the store. The boundary cannot use hooks, and
+   * when it renders the tree below it has already failed.
+   */
+  private get locale(): Locale {
+    try {
+      return useStore.getState().locale;
+    } catch {
+      return 'en';
+    }
+  }
 
   static getDerivedStateFromError(error: Error): State {
     return { error };
@@ -34,10 +48,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return (
       <div className="crash card" role="alert">
-        <h1 style={{ fontSize: 22, marginBottom: 12 }}>FretLab ran into a problem</h1>
-        <p style={{ color: 'var(--text-muted)' }}>
-          Something in the interface failed to render. The details are in your browser console.
-        </p>
+        <h1 style={{ fontSize: 22, marginBottom: 12 }}>{translate(this.locale, 'crash.title')}</h1>
+        <p style={{ color: 'var(--text-muted)' }}>{translate(this.locale, 'crash.body')}</p>
         <pre
           style={{
             whiteSpace: 'pre-wrap',
@@ -54,7 +66,7 @@ export class ErrorBoundary extends Component<Props, State> {
         </pre>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
           <button type="button" className="btn btn-primary" onClick={() => location.reload()}>
-            Reload the page
+            {translate(this.locale, 'crash.reload')}
           </button>
           <button
             type="button"
@@ -68,7 +80,7 @@ export class ErrorBoundary extends Component<Props, State> {
               location.reload();
             }}
           >
-            Clear saved settings and reload
+            {translate(this.locale, 'crash.clear')}
           </button>
         </div>
       </div>

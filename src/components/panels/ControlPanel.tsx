@@ -15,6 +15,21 @@ import { CHORDS, CHORD_CATEGORIES, getChord } from '../../core/theory/chords';
 import { validateTuning } from '../../core/theory/fretboard';
 import { FAMILIES, getInstrument, instrumentsOfFamily } from '../../core/instruments/definitions';
 import { midiToNote, noteNameToMidi } from '../../core/theory/pitch';
+import {
+  categoryText,
+  chordText,
+  reasonText,
+  scaleText,
+  tuningText,
+  useLocale,
+  useT,
+} from '../../i18n';
+import type { TFunction } from '../../i18n';
+
+/** The instrument's own name, which lives in the message catalogue. */
+function instrumentName(t: TFunction, id: string): string {
+  return id === 'bass4' ? t('instrument.bass4') : t('instrument.guitar6');
+}
 
 export function ControlPanel() {
   const mode = useStore((s) => s.mode);
@@ -31,6 +46,7 @@ export function ControlPanel() {
 }
 
 function InstrumentCard() {
+  const t = useT();
   const instrumentId = useStore((s) => s.instrumentId);
   const setInstrument = useStore((s) => s.setInstrument);
   const setFamily = useStore((s) => s.setFamily);
@@ -39,10 +55,10 @@ function InstrumentCard() {
   const siblings = instrumentsOfFamily(family);
 
   return (
-    <Card title="Instrument" id="instrument">
+    <Card title={t('instrument.title')} id="instrument">
       <div className="field">
         <span className="field-label" id="family-label">
-          Type
+          {t('instrument.type')}
         </span>
         <div className="segmented" role="group" aria-labelledby="family-label">
           {FAMILIES.map((f) => (
@@ -52,7 +68,7 @@ function InstrumentCard() {
               aria-pressed={f.id === family}
               onClick={() => setFamily(f.id)}
             >
-              {f.name}
+              {t(f.id === 'guitar' ? 'family.guitar' : 'family.bass')}
             </button>
           ))}
         </div>
@@ -61,7 +77,7 @@ function InstrumentCard() {
       {siblings.length > 1 && (
       <div className="field">
         <span className="field-label" id="strings-label">
-          Strings
+          {t('instrument.strings')}
         </span>
         <div className="segmented" role="group" aria-labelledby="strings-label">
           {siblings.map((i) => (
@@ -70,9 +86,12 @@ function InstrumentCard() {
               type="button"
               aria-pressed={i.id === instrumentId}
               onClick={() => setInstrument(i.id)}
-              title={`${i.name}, ${i.fretCount} frets`}
+              title={t('instrument.option.help', {
+                name: instrumentName(t, i.id),
+                frets: i.fretCount,
+              })}
             >
-              {i.stringCount}-string
+              {t('instrument.stringCount', { n: i.stringCount })}
             </button>
           ))}
         </div>
@@ -80,14 +99,24 @@ function InstrumentCard() {
       )}
 
       <p className="field-hint">
-        {ctx.instrument.name} &middot; {ctx.instrument.stringCount} strings &middot;{' '}
-        {ctx.instrument.fretCount} frets &middot; {ctx.instrument.scaleLengthIn}" scale
+        {t('instrument.summary', {
+          name: instrumentName(t, ctx.instrument.id),
+          strings: ctx.instrument.stringCount,
+          frets: ctx.instrument.fretCount,
+          scale: ctx.instrument.scaleLengthIn,
+        })}
       </p>
     </Card>
   );
 }
 
+/** Open strings without their octave numbers, as a tuning is usually written. */
+const letters = (notes: readonly string[]): string =>
+  notes.map((n) => n.replace(/-?\d+$/, '')).join(' ');
+
 function TuningCard() {
+  const t = useT();
+  const locale = useLocale();
   const instrumentId = useStore((s) => s.instrumentId);
   const tuningId = useStore((s) => s.tuningId);
   const setTuning = useStore((s) => s.setTuning);
@@ -105,8 +134,13 @@ function TuningCard() {
   const validation = useMemo(() => validateTuning(draft, instrument.stringCount), [draft, instrument.stringCount]);
 
   const options: Option[] = [
-    ...instrument.tunings.map((t) => ({ value: t.id, label: t.name, group: 'Presets' })),
-    { value: 'custom', label: 'Custom tuning…', group: 'Presets' },
+    ...instrument.tunings.map((x) => ({
+      value: x.id,
+      // The name is translated; the open-string letters come from the tuning.
+      label: `${tuningText(locale, x.id)} — ${letters(x.notes)}`,
+      group: t('tuning.preset'),
+    })),
+    { value: 'custom', label: t('tuning.custom'), group: t('tuning.preset') },
   ];
 
   const applyCustom = (): void => {
@@ -131,10 +165,10 @@ function TuningCard() {
   };
 
   return (
-    <Card title="Tuning" id="tuning">
+    <Card title={t('tuning.title')} id="tuning">
       <Field
-        label="Preset"
-        help="Every note name, highlight, chord shape and tuner target is recalculated from the tuning you pick here."
+        label={t('tuning.preset')}
+        help={t('tuning.preset.help')}
       >
         {({ id, describedBy, labelledBy }) => (
           <Select
@@ -149,25 +183,27 @@ function TuningCard() {
       </Field>
 
       <p className="field-hint">
-        Open strings, lowest first: <strong>{ctx.tuning.notes.join('  ')}</strong>
+        {t('tuning.openStrings')} <strong>{ctx.tuning.notes.join('  ')}</strong>
       </p>
 
       <details style={{ marginTop: 12 }}>
         <summary
           style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}
         >
-          Custom tuning editor
+          {t('tuning.editor')}
         </summary>
         <div style={{ marginTop: 12 }}>
           <p className="field-hint" style={{ marginBottom: 8 }}>
-            Give each string a note name with an octave, such as <code>D2</code> or{' '}
-            <code>Bb1</code>. String 1 is the lowest-pitched string.
+            {t('tuning.editor.hint')}
           </p>
           {draft.map((note, i) => (
             <div key={i} className="field" style={{ marginBottom: 8 }}>
               <label className="field-label" htmlFor={`cust-${i}`}>
-                String {instrument.stringCount - i}
-                {i === 0 ? ' (lowest)' : i === instrument.stringCount - 1 ? ' (highest)' : ''}
+                {i === 0
+                  ? t('tuning.string.lowest', { n: instrument.stringCount - i })
+                  : i === instrument.stringCount - 1
+                    ? t('tuning.string.highest', { n: instrument.stringCount - i })
+                    : t('tuning.string', { n: instrument.stringCount - i })}
               </label>
               <input
                 id={`cust-${i}`}
@@ -194,20 +230,20 @@ function TuningCard() {
           )}
           <div className="strum-row" style={{ marginTop: 10 }}>
             <button type="button" className="btn btn-primary" disabled={!validation.ok} onClick={applyCustom}>
-              Apply custom tuning
+              {t('tuning.apply')}
             </button>
-            <button type="button" className="btn btn-sm" onClick={() => shift(-1)} title="Lower every string a semitone">
-              All &minus;1
+            <button type="button" className="btn btn-sm" onClick={() => shift(-1)} title={t('tuning.down.help')}>
+              {t('tuning.down')}
             </button>
-            <button type="button" className="btn btn-sm" onClick={() => shift(1)} title="Raise every string a semitone">
-              All +1
+            <button type="button" className="btn btn-sm" onClick={() => shift(1)} title={t('tuning.up.help')}>
+              {t('tuning.up')}
             </button>
             <button
               type="button"
               className="btn btn-sm"
               onClick={() => setDraft(customTuningSeed(useStore.getState()))}
             >
-              Reset
+              {t('tuning.reset')}
             </button>
           </div>
         </div>
@@ -217,6 +253,8 @@ function TuningCard() {
 }
 
 function ScaleCard() {
+  const t = useT();
+  const locale = useLocale();
   const scaleRoot = useStore((s) => s.scaleRoot);
   const scaleId = useStore((s) => s.scaleId);
   const setScaleRoot = useStore((s) => s.setScaleRoot);
@@ -226,17 +264,17 @@ function ScaleCard() {
   const scaleOptions: Option[] = SCALE_CATEGORIES.flatMap((cat) =>
     SCALES.filter((s) => s.category === cat).map((s) => ({
       value: s.id,
-      label: s.name,
-      group: cat,
+      label: scaleText(locale, s.id)[0],
+      group: categoryText(locale, cat),
     })),
   );
 
   return (
     <Card
-      title="Scale / mode"
+      title={t('scale.title')}
       id="scale"
     >
-      <Field label="Root note" help="The root also decides the spelling: pick Bb for flat keys, F# for sharp keys.">
+      <Field label={t('scale.root')} help={t('scale.root.help')}>
         {({ id, describedBy, labelledBy }) => (
           <Select
             id={id}
@@ -248,7 +286,7 @@ function ScaleCard() {
           />
         )}
       </Field>
-      <Field label="Scale or mode" hint={scale.about}>
+      <Field label={t('scale.which')} hint={scaleText(locale, scale.id)[1]}>
         {({ id, describedBy, labelledBy }) => (
           <Select
             id={id}
@@ -265,6 +303,8 @@ function ScaleCard() {
 }
 
 function ChordCard() {
+  const t = useT();
+  const locale = useLocale();
   const chordRoot = useStore((s) => s.chordRoot);
   const chordId = useStore((s) => s.chordId);
   const setChordRoot = useStore((s) => s.setChordRoot);
@@ -280,24 +320,24 @@ function ChordCard() {
   const chordOptions: Option[] = CHORD_CATEGORIES.flatMap((cat) =>
     CHORDS.filter((c) => c.category === cat).map((c) => ({
       value: c.id,
-      label: `${c.name}${c.symbol ? ` — ${chordRoot}${c.symbol}` : ` — ${chordRoot}`}`,
-      group: cat,
+      label: `${chordText(locale, c.id)[0]} — ${chordRoot}${c.symbol}`,
+      group: categoryText(locale, cat),
     })),
   );
 
   return (
     <Card
-      title="Chord"
+      title={t('chord.title')}
       id="chord"
       action={
         mode !== 'chord' ? (
           <button type="button" className="btn btn-sm btn-ghost" onClick={() => setMode('chord')}>
-            Show shapes
+            {t('chord.showShapes')}
           </button>
         ) : undefined
       }
     >
-      <Field label="Root note">
+      <Field label={t('chord.root')}>
         {({ id, describedBy, labelledBy }) => (
           <Select
             id={id}
@@ -309,7 +349,7 @@ function ChordCard() {
           />
         )}
       </Field>
-      <Field label="Chord type" hint={chord.about}>
+      <Field label={t('chord.type')} hint={chordText(locale, chord.id)[1]}>
         {({ id, describedBy, labelledBy }) => (
           <Select
             id={id}
@@ -325,45 +365,41 @@ function ChordCard() {
       {/* The chord/scale relationship, stated rather than implied. */}
       <div style={{ marginTop: 14 }}>
         <div className="field-label" style={{ marginBottom: 6 }}>
-          Scales that fit {ctx.chordName} <Help text="A chord is the few notes you fret together. A scale is the larger pool of notes you can solo with over it. These scales contain every note of the chord." />
+          {t('chord.fitting', { chord: ctx.chordName })} <Help text={t('chord.fitting.help')} />
         </div>
         {ctx.suggestions.length === 0 ? (
-          <p className="field-hint">
-            No catalogued scale contains every note of this chord. Use chord mode to see its tones
-            on the fretboard instead.
-          </p>
+          <p className="field-hint">{t('chord.fitting.none')}</p>
         ) : (
           <div className="chip-row">
             {ctx.suggestions.slice(0, 5).map((s) => {
-              const scale = getScale(s.scaleId);
               return (
                 <button
                   key={s.scaleId}
                   type="button"
                   className="chip chip-accent"
-                  title={`${chordRoot} ${scale.name} — ${s.reason}`}
+                  title={`${chordRoot} ${scaleText(locale, s.scaleId)[0]} — ${reasonText(locale, s.scaleId)}`}
                   onClick={() => {
                     setScale(chordRoot, s.scaleId);
                     setMode('scale');
                   }}
                 >
-                  {chordRoot} {scale.name}
+                  {chordRoot} {scaleText(locale, s.scaleId)[0]}
                 </button>
               );
             })}
           </div>
         )}
         <p className="field-hint" style={{ marginTop: 8 }}>
-          Picking one switches the fretboard to that <em>scale</em>, rooted on {chordRoot}.
+          {t('chord.fitting.hint', { root: chordRoot })}
         </p>
       </div>
 
       <div style={{ marginTop: 12 }}>
         <Switch
-          label="Dim the scale behind chord shapes"
+          label={t('chord.overlay')}
           checked={scaleOverlay}
           onChange={setScaleOverlay}
-          help="Shows the selected scale faintly underneath the chord shape so you can see how they relate."
+          help={t('chord.overlay.help')}
         />
       </div>
     </Card>

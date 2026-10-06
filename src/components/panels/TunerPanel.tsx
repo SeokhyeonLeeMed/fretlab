@@ -14,8 +14,30 @@ import { useTunerReadings } from '../../hooks/useTuner';
 import { tunerEngine } from '../../core/tuner/TunerEngine';
 import { audioEngine } from '../../core/audio/AudioEngine';
 import { usePlayback } from '../../hooks/usePlayback';
+import { useT, type TFunction } from '../../i18n';
+
+/**
+ * The engine reports failures in English, because it has no view layer. The
+ * cause is what matters, so the message is chosen from the state here and the
+ * engine's own text is kept only for the cases that quote a browser error.
+ */
+function localisedTunerError(t: TFunction, state: string, error: string | null): string {
+  switch (state) {
+    case 'denied':
+      return t('tuner.msg.denied');
+    case 'no-device':
+      return t('tuner.msg.noDevice');
+    case 'insecure':
+      return t('tuner.msg.insecure');
+    case 'unsupported':
+      return t('tuner.msg.unsupported');
+    default:
+      return error ?? t('tuner.error.unknown');
+  }
+}
 
 export function TunerPanel({ visible }: { visible: boolean }) {
+  const t = useT();
   const ctx = useMusicContext();
   const pinned = useStore((s) => s.tunerStringIndex);
   const setPinned = useStore((s) => s.setTunerStringIndex);
@@ -38,7 +60,7 @@ export function TunerPanel({ visible }: { visible: boolean }) {
 
   return (
     <div className={`tuner-overlay${visible ? ' is-visible' : ''}`} aria-hidden={!visible}>
-      <div className="tuner-card" role="region" aria-label="Chromatic tuner">
+      <div className="tuner-card" role="region" aria-label={t('tuner.title')}>
         {snapshot.state !== 'running' ? (
           <TunerStatus state={snapshot.state} error={snapshot.error} />
         ) : (
@@ -51,16 +73,16 @@ export function TunerPanel({ visible }: { visible: boolean }) {
                     <small>{chromatic.fullName.slice(chromatic.noteName.length)}</small>
                   </>
                 ) : (
-                  <span style={{ fontSize: 24, color: 'var(--text-muted)' }}>Listening…</span>
+                  <span style={{ fontSize: 24, color: 'var(--text-muted)' }}>{t('tuner.listening')}</span>
                 )}
               </div>
               <div>
                 <div className="tuner-facts">
                   <span>
-                    Detected <b>{snapshot.pitch ? `${snapshot.pitch.freq.toFixed(2)} Hz` : '—'}</b>
+                    {t('tuner.detected')} <b>{snapshot.pitch ? `${snapshot.pitch.freq.toFixed(2)} Hz` : '—'}</b>
                   </span>
                   <span>
-                    Target{' '}
+                    {t('tuner.target')}{' '}
                     <b>
                       {reading
                         ? `${pinned === null ? chromatic?.fullName : string?.targetName} ${reading.targetFreq.toFixed(2)} Hz`
@@ -68,12 +90,19 @@ export function TunerPanel({ visible }: { visible: boolean }) {
                     </b>
                   </span>
                   <span>
-                    Deviation <b>{reading ? `${cents >= 0 ? '+' : ''}${cents.toFixed(1)} cents` : '—'}</b>
+                    {t('tuner.deviation')}{' '}
+                    <b>
+                      {reading
+                        ? t('tuner.cents', {
+                            cents: `${cents >= 0 ? '+' : ''}${cents.toFixed(1)}`,
+                          })
+                        : '—'}
+                    </b>
                   </span>
                 </div>
                 <div className="tuner-facts" style={{ marginTop: 4 }}>
                   <span>
-                    Tuning to <b>{ctx.tuning.notes.join(' ')}</b>
+                    {t('tuner.tuningTo')} <b>{ctx.tuning.notes.join(' ')}</b>
                   </span>
                 </div>
               </div>
@@ -81,14 +110,14 @@ export function TunerPanel({ visible }: { visible: boolean }) {
 
             {pinned !== null && (
               <p className="field-hint" style={{ margin: '0 0 8px' }}>
-                Listening for the <strong>{ctx.tuning.notes[pinned]}</strong> string only.{' '}
+                {t('tuner.pinned', { note: ctx.tuning.notes[pinned] })}{' '}
                 <button
                   type="button"
                   className="btn btn-sm btn-ghost"
                   style={{ minHeight: 26, padding: '0 8px' }}
                   onClick={() => setPinned(null)}
                 >
-                  Follow any string
+                  {t('tuner.followAny')}
                 </button>
               </p>
             )}
@@ -101,8 +130,16 @@ export function TunerPanel({ visible }: { visible: boolean }) {
               aria-valuenow={Math.round(cents)}
               aria-valuetext={
                 reading
-                  ? `${Math.abs(cents).toFixed(0)} cents ${verdict === 'in-tune' ? 'in tune' : verdict}`
-                  : 'no signal'
+                  ? t('tuner.meter.reading', {
+                      cents: Math.abs(cents).toFixed(0),
+                      verdict:
+                        verdict === 'in-tune'
+                          ? t('tuner.inTune')
+                          : verdict === 'flat'
+                            ? t('tuner.flat', { cents: Math.abs(Math.round(cents)) })
+                            : t('tuner.sharp', { cents: Math.abs(Math.round(cents)) }),
+                    })
+                  : t('tuner.meter.noSignal')
               }
             >
               <div className="tuner-meter-zone" />
@@ -126,20 +163,29 @@ export function TunerPanel({ visible }: { visible: boolean }) {
             {/* Never colour alone: the verdict is always spelled out. */}
             <div className="tuner-verdict" data-verdict={verdict} aria-live="polite">
               {!reading ? (
-                <span style={{ color: 'var(--text-muted)' }}>Play a single open string</span>
+                <span style={{ color: 'var(--text-muted)' }}>{t('tuner.playOne')}</span>
               ) : wrongString ? (
                 <span style={{ color: 'var(--text-muted)' }}>
-                  That is {chromatic?.fullName}, not the {string?.targetName} string
+                  {t('tuner.wrongString', {
+                    played: chromatic?.fullName ?? '',
+                    target: string?.targetName ?? '',
+                  })}
                 </span>
               ) : verdict === 'in-tune' ? (
                 <>
-                  ✓ In tune
-                  {pinned === null ? (chromatic ? ` — ${chromatic.fullName}` : '') : string ? ` — ${string.targetName}` : ''}
+                  ✓ {t('tuner.inTune')}
+                  {pinned === null
+                    ? chromatic
+                      ? ` — ${chromatic.fullName}`
+                      : ''
+                    : string
+                      ? ` — ${string.targetName}`
+                      : ''}
                 </>
               ) : verdict === 'flat' ? (
-                <>▲ Flat by {Math.abs(cents).toFixed(0)} cents — tighten the string</>
+                t('tuner.flat', { cents: Math.abs(Math.round(cents)) })
               ) : (
-                <>▼ Sharp by {Math.abs(cents).toFixed(0)} cents — loosen the string</>
+                t('tuner.sharp', { cents: Math.abs(Math.round(cents)) })
               )}
             </div>
 
@@ -147,15 +193,15 @@ export function TunerPanel({ visible }: { visible: boolean }) {
               <div style={{ width: `${Math.round(snapshot.level * 100)}%` }} />
             </div>
 
-            <div className="tuner-strings" role="group" aria-label="Target string">
+            <div className="tuner-strings" role="group" aria-label={t('tuner.targetString')}>
               <button
                 type="button"
                 className="btn btn-sm"
                 aria-pressed={pinned === null}
                 onClick={() => setPinned(null)}
-                title="Compare against whichever string is closest"
+                title={t('tuner.auto.help')}
               >
-                Auto
+                {t('tuner.auto')}
               </button>
               {ctx.tuning.notes.map((note, i) => (
                 <button
@@ -168,7 +214,7 @@ export function TunerPanel({ visible }: { visible: boolean }) {
                     setPinned(pinned === i ? null : i);
                     playNote(ctx.openMidis[i], i);
                   }}
-                  title={`String ${ctx.instrument.stringCount - i}: ${note}. Plays the reference pitch, and pins the tuner to this string; click again to follow any string.`}
+                  title={t('tuner.string.help', { n: ctx.instrument.stringCount - i, note })}
                 >
                   {note}
                 </button>
@@ -176,15 +222,14 @@ export function TunerPanel({ visible }: { visible: boolean }) {
             </div>
 
             <p className="field-hint" style={{ marginTop: 10 }}>
-              Pick a string to pin it as the target and hear its reference pitch, or leave it on
-              Auto. <Help text="The targets come from the tuning selected in the sidebar, so the tuner works for Drop D, Eb standard, a custom tuning and everything else." />
+              {t('tuner.pinHint')} <Help text={t('tuner.pinHint.help')} />
             </p>
           </>
         )}
 
         <div className="strum-row" style={{ marginTop: 14, justifyContent: 'flex-end' }}>
           <button type="button" className="btn" onClick={() => setMode('scale')}>
-            Close tuner
+            {t('tuner.close')}
           </button>
         </div>
       </div>
@@ -193,29 +238,21 @@ export function TunerPanel({ visible }: { visible: boolean }) {
 }
 
 function TunerStatus({ state, error }: { state: string; error: string | null }) {
+  const t = useT();
   const retry = (): void => {
     void tunerEngine.start(audioEngine.context);
   };
 
   if (state === 'requesting') {
-    return (
-      <Notice title="Waiting for microphone permission">
-        Your browser is asking whether FretLab may use the microphone. Choose <strong>Allow</strong>{' '}
-        to start tuning. Nothing is recorded, uploaded or stored: the audio is analysed in the page
-        and discarded.
-      </Notice>
-    );
+    return <Notice title={t('tuner.waiting.title')}>{t('tuner.waiting.body')}</Notice>;
   }
 
   if (state === 'idle') {
     return (
-      <Notice title="Tuner ready">
-        <p style={{ margin: '0 0 10px' }}>
-          The tuner listens through your microphone. Permission is requested only now, when you
-          actually open the tuner.
-        </p>
+      <Notice title={t('tuner.ready.title')}>
+        <p style={{ margin: '0 0 10px' }}>{t('tuner.ready.body')}</p>
         <button type="button" className="btn btn-primary" onClick={retry}>
-          Start listening
+          {t('tuner.start')}
         </button>
       </Notice>
     );
@@ -226,24 +263,24 @@ function TunerStatus({ state, error }: { state: string; error: string | null }) 
       kind="error"
       title={
         state === 'denied'
-          ? 'Microphone permission denied'
+          ? t('tuner.error.denied')
           : state === 'no-device'
-            ? 'No microphone found'
+            ? t('tuner.error.noDevice')
             : state === 'insecure'
-              ? 'A secure connection is required'
+              ? t('tuner.error.insecure')
               : state === 'unsupported'
-                ? 'This browser cannot capture audio'
-                : 'The tuner could not start'
+                ? t('tuner.error.unsupported')
+                : t('tuner.error.other')
       }
       action={
         state === 'unsupported' ? undefined : (
           <button type="button" className="btn btn-sm" onClick={retry}>
-            Try again
+            {t('tuner.retry')}
           </button>
         )
       }
     >
-      {error ?? 'An unknown problem stopped the tuner.'}
+      {localisedTunerError(t, state, error)}
     </Notice>
   );
 }

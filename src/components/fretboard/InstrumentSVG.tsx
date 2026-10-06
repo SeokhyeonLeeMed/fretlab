@@ -16,7 +16,7 @@ import { spellMidi, type SpellingMap } from '../../core/theory/spelling';
 import { mod } from '../../core/theory/pitch';
 import type { Voicing } from '../../core/theory/voicing';
 import type { LabelStyle, Mode, SelectedPosition } from '../../state/store';
-
+import { useT } from '../../i18n';
 export interface NoteRoleInfo {
   role: 'root' | 'scale' | 'chord-root' | 'chord-tone' | 'voicing' | 'plain';
   label: string | null;
@@ -66,6 +66,7 @@ const ROLE_INK: Record<NoteRoleInfo['role'], string> = {
 
 export function InstrumentSVG(props: InstrumentSVGProps) {
   const { geo, openMidis, mode, selected, onPick } = props;
+  const t = useT();
   const [focusCell, setFocusCell] = useState<SelectedPosition>({ stringIndex: 0, fret: 0 });
   // The focus ring only appears once the grid really has keyboard focus, so
   // it is never a stray blue box on a freshly loaded page.
@@ -188,7 +189,9 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
       width={geo.width}
       height={geo.height}
       role="group"
-      aria-label={`${geo.instrument.name} fretboard`}
+      aria-label={t('fretboard.label', {
+        instrument: t(geo.instrument.id === 'bass4' ? 'instrument.bass4' : 'instrument.guitar6'),
+      })}
       style={{ display: 'block' }}
     >
       {/* ---- the instrument, drawn from the artwork ---------------------- */}
@@ -272,14 +275,14 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
       <g
         ref={gridRef}
         role="grid"
-        aria-label={`Fretboard. Arrow keys move between positions, Enter plays. Current position: ${focusedName}.`}
+        aria-label={t('fretboard.grid', { note: focusedName })}
         tabIndex={0}
         onKeyDown={handleKey}
         onFocus={() => setGridFocused(true)}
         onBlur={() => setGridFocused(false)}
         style={{ outline: 'none' }}
       >
-        <title>{`Fretboard, currently on ${focusedName}`}</title>
+        <title>{t('fretboard.current', { note: focusedName })}</title>
         {strings.map((s) =>
           frets.map((f) => (
             <NoteCell
@@ -295,7 +298,11 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
               }
               onPick={onPick}
               onFocusCell={setFocusCell}
-              name={spellMidi(openMidis[s] + f, props.spelling).full}
+              label={t('fretboard.cell', {
+                note: spellMidi(openMidis[s] + f, props.spelling).full,
+                string: geo.stringCount - s,
+                where: f === 0 ? t('info.open') : t('info.fret', { n: f }),
+              })}
             />
           )),
         )}
@@ -339,7 +346,8 @@ interface NoteCellProps {
   selected: boolean;
   focused: boolean;
   fingerLabel: string | null;
-  name: string;
+  /** Pre-translated accessible name for the position. */
+  label: string;
   onPick: (stringIndex: number, fret: number) => void;
   onFocusCell: (p: SelectedPosition) => void;
 }
@@ -359,7 +367,7 @@ const NoteCell = memo(function NoteCell({
   selected,
   focused,
   fingerLabel,
-  name,
+  label,
   onPick,
   onFocusCell,
 }: NoteCellProps) {
@@ -380,7 +388,7 @@ const NoteCell = memo(function NoteCell({
       className="fret-note"
       data-focused={focused}
       role="gridcell"
-      aria-label={`${name}, string ${geo.stringCount - stringIndex}, ${fret === 0 ? 'open' : `fret ${fret}`}`}
+      aria-label={label}
       onPointerDown={(e) => {
         e.preventDefault();
         onFocusCell({ stringIndex, fret });

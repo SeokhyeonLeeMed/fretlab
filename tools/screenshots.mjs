@@ -37,7 +37,8 @@ await shot('02-chord-guitar6');
 
 // 3. 7-string + drop G
 await page.getByRole('button', { name: 'Bass', exact: true }).click();
-await page.selectOption('select >> nth=0', 'drop-d');
+// By name: the language picker is now the first <select> on the page.
+await page.getByRole('combobox', { name: /Preset/ }).selectOption('drop-d');
 await shot('03-bass-dropd');
 
 // 4. 5-string bass, scale mode
@@ -68,10 +69,23 @@ await page.setViewportSize({ width: 390, height: 844 });
 await page.waitForTimeout(500);
 await shot('08-mobile');
 
-// 9. mobile, scrolled along the neck
+// 8b. mobile, scrolled along the neck
 await page.$eval('.stage-scroll', (el) => { el.scrollLeft = 420; });
-await shot('09-mobile-scrolled');
+await shot('08b-mobile-scrolled');
 
-fs.writeFileSync(`${OUT}/report.json`, JSON.stringify({ font, notoLoaded, camera, cameraAfter, errors }, null, 2));
-console.log(JSON.stringify({ font, notoLoaded, camera, cameraAfter, errors }, null, 2));
+// 9. Korean, back on the desktop viewport: the controls, the scale catalogue
+// and the fretboard labels all follow the language.
+await page.setViewportSize({ width: 1440, height: 950 });
+await page.waitForTimeout(400);
+await page.selectOption('#locale-select', 'ko');
+// Wait for the Korean webfont the language switch pulls in.
+await page.evaluate(() => document.fonts.ready);
+await page.waitForTimeout(900);
+await shot('09-korean');
+const koreanFont = await page.evaluate(() => document.fonts.check('16px "Noto Sans KR"'));
+const htmlLang = await page.evaluate(() => document.documentElement.lang);
+await page.selectOption('#locale-select', 'en');
+
+fs.writeFileSync(`${OUT}/report.json`, JSON.stringify({ font, notoLoaded, camera, cameraAfter, koreanFont, htmlLang, errors }, null, 2));
+console.log(JSON.stringify({ font, notoLoaded, camera, cameraAfter, koreanFont, htmlLang, errors }, null, 2));
 await browser.close();

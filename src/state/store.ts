@@ -15,6 +15,7 @@ import { STRUM_PRESETS, type StrumMode, type StrumPreset } from '../core/audio/A
 export type Mode = 'normal' | 'scale' | 'chord' | 'tuner';
 export type LabelStyle = 'note' | 'degree';
 export type Theme = 'dark' | 'light';
+export type Locale = 'en' | 'ko' | 'ja' | 'zh-Hans' | 'zh-Hant' | 'es';
 
 export interface SelectedPosition {
   stringIndex: number;
@@ -56,6 +57,8 @@ export interface AppState {
 
   zoom: number;
   theme: Theme;
+  /** Interface language. Detected from the browser on first run. */
+  locale: Locale;
 
   volume: number;
   /** Concert pitch in Hz: what A4 is tuned to. */
@@ -91,6 +94,7 @@ export interface AppState {
   setScaleOverlayInChordMode: (v: boolean) => void;
   setZoom: (z: number) => void;
   setTheme: (t: Theme) => void;
+  setLocale: (l: Locale) => void;
   setVolume: (v: number) => void;
   setA4: (hz: number) => void;
   setStrumMode: (m: StrumMode) => void;
@@ -101,6 +105,27 @@ export interface AppState {
   saveViewBeforeTuner: (v: ViewSnapshot) => void;
   clearViewBeforeTuner: () => void;
   reset: () => void;
+}
+
+/**
+ * The browser's preferred language, narrowed to one FretLab offers. Kept here
+ * rather than imported from i18n so the store has no dependency on it; the
+ * i18n module's detectLocale is the same rule and is the one under test.
+ */
+function detectInitialLocale(): Locale {
+  const langs: readonly string[] =
+    typeof navigator === 'undefined' ? [] : (navigator.languages ?? [navigator.language ?? 'en']);
+  for (const raw of langs) {
+    const tag = String(raw).toLowerCase();
+    if (tag.startsWith('zh')) {
+      return tag.includes('hant') || /-(tw|hk|mo)/.test(tag) ? 'zh-Hant' : 'zh-Hans';
+    }
+    if (tag.startsWith('ko')) return 'ko';
+    if (tag.startsWith('ja')) return 'ja';
+    if (tag.startsWith('es')) return 'es';
+    if (tag.startsWith('en')) return 'en';
+  }
+  return 'en';
 }
 
 export const ZOOM_MIN = 0.55;
@@ -124,6 +149,7 @@ const DEFAULTS = {
   showNonScaleNotes: true,
   zoom: 1,
   theme: 'dark' as Theme,
+  locale: detectInitialLocale(),
   volume: 0.75,
   a4: 440,
   strumMode: 'down' as StrumMode,
@@ -195,6 +221,7 @@ export const useStore = create<AppState>()(
 
       setZoom: (z) => set({ zoom: Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z)) }),
       setTheme: (theme) => set({ theme }),
+      setLocale: (locale) => set({ locale }),
 
       setVolume: (v) => set({ volume: Math.min(1, Math.max(0, v)) }),
       setA4: (hz) => set({ a4: Math.min(466, Math.max(392, hz)) }),
@@ -231,6 +258,7 @@ export const useStore = create<AppState>()(
         showNonScaleNotes: s.showNonScaleNotes,
         zoom: s.zoom,
         theme: s.theme,
+        locale: s.locale,
         volume: s.volume,
         a4: s.a4,
         strumMode: s.strumMode,

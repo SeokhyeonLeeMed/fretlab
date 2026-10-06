@@ -12,8 +12,25 @@ import { useStore } from '../../state/store';
 import { usePlayback } from '../../hooks/usePlayback';
 import { describeVoicing, type Voicing } from '../../core/theory/voicing';
 import { STRUM_PRESETS, type StrumMode, type StrumPreset } from '../../core/audio/AudioEngine';
+import { useT, type TFunction } from '../../i18n';
+
+/**
+ * A voicing's position, translated. The solver returns a stable description;
+ * turning it into words is the interface's job, not the engine's.
+ */
+function positionLabel(t: TFunction, v: Voicing): string {
+  if (v.barre !== null) return t('voicing.barre', { fret: v.barre });
+  if (v.position === 'All open') return t('voicing.allOpen');
+  if (v.position === 'Open position') return t('voicing.openPosition');
+  const power = /^String (\d+), fret (\d+)$/.exec(v.position);
+  if (power) return t('voicing.power', { string: +power[1], fret: +power[2] });
+  const at = /^Position (\d+)$/.exec(v.position);
+  if (at) return t('voicing.position', { fret: +at[1] });
+  return v.position;
+}
 
 export function ChordPanel() {
+  const t = useT();
   const ctx = useMusicContext();
   const { voicings, active, empty } = useVoicings();
   const voicingIndex = useStore((s) => s.voicingIndex);
@@ -24,32 +41,35 @@ export function ChordPanel() {
 
   return (
     <Card
-      title={`Chord — ${ctx.chordName}`}
+      title={t('chords.title', { chord: ctx.chordName })}
       id="chords"
       action={
         mode !== 'chord' ? (
           <button type="button" className="btn btn-sm btn-ghost" onClick={() => setMode('chord')}>
-            Show on fretboard
+            {t('chord.showOnFretboard')}
           </button>
         ) : undefined
       }
     >
       {empty ? (
-        <Notice kind="error" title="No playable shape in this tuning">
-          {ctx.chordName} cannot be fingered on {ctx.instrument.name} tuned{' '}
-          {ctx.tuning.notes.join(' ')} within a four-fret stretch. Try a different chord type, a
-          different root, or another tuning — rather than showing you a shape that would sound like
-          something else.
+        <Notice kind="error" title={t('chords.none.title')}>
+          {t('chords.none.body', {
+            chord: ctx.chordName,
+            instrument: t(ctx.instrument.id === 'bass4' ? 'instrument.bass4' : 'instrument.guitar6'),
+            tuning: ctx.tuning.notes.join(' '),
+          })}
         </Notice>
       ) : (
         <>
           <p className="field-hint" style={{ marginBottom: 10 }}>
-            {voicings.length} shape{voicings.length === 1 ? '' : 's'} found for{' '}
-            <strong>{ctx.chordName}</strong> in {ctx.tuning.notes.join(' ')}. Numbers are fret
-            numbers; <strong>✕</strong> means do not play that string.
+            {t('chords.found', {
+              n: voicings.length,
+              chord: ctx.chordName,
+              tuning: ctx.tuning.notes.join(' '),
+            })}
           </p>
 
-          <div className="voicing-list" role="group" aria-label="Chord shapes">
+          <div className="voicing-list" role="group" aria-label={t('chords.shapes')}>
             {voicings.map((v, i) => (
               <button
                 key={v.id}
@@ -64,13 +84,13 @@ export function ChordPanel() {
                 title={`${v.position} — ${describeVoicing(v, ctx.spelling).names.join(' ')}`}
               >
                 <ChordDiagram voicing={v} />
-                <span className="name">{v.position}</span>
+                <span className="name">{positionLabel(t, v)}</span>
                 <span className="frets">
                   {v.frets.map((f) => (f === null ? '✕' : f)).join(' ')}
                 </span>
                 {v.barre !== null && (
                   <span className="chip" style={{ padding: '1px 6px', fontSize: 10 }}>
-                    barre {v.barre}
+                    {t('chords.barre', { fret: v.barre })}
                   </span>
                 )}
               </button>
@@ -79,9 +99,7 @@ export function ChordPanel() {
 
           {!voicings.some((v) => v.barre !== null) && (
             <p className="field-hint" style={{ marginTop: 10 }}>
-              No barre shape exists for {ctx.chordName} in this tuning: a barre needs two chord
-              tones at the same fret on different strings, and this chord's intervals never line up
-              that way here.
+              {t('chords.noBarre', { chord: ctx.chordName })}
             </p>
           )}
 
@@ -95,13 +113,13 @@ export function ChordPanel() {
 }
 
 function ActiveVoicingFacts({ voicing }: { voicing: Voicing }) {
+  const t = useT();
   const ctx = useMusicContext();
   const sounds = describeVoicing(voicing, ctx.spelling);
   return (
     <div style={{ marginTop: 14 }}>
       <div className="field-label" style={{ marginBottom: 4 }}>
-        This shape actually sounds{' '}
-        <Help text="Computed from the current tuning, not assumed from a standard-tuning shape." />
+        {t('chords.sounds')} <Help text={t('chords.sounds.help')} />
       </div>
       <div className="note-list">
         {sounds.names.map((n, i) => (
@@ -111,15 +129,10 @@ function ActiveVoicingFacts({ voicing }: { voicing: Voicing }) {
         ))}
       </div>
       <p className="field-hint" style={{ marginTop: 8 }}>
-        Chord tones: {voicing.tones.join(', ')}
-        {voicing.missing.length > 0 && (
-          <>
-            {' '}
-            · omits {voicing.missing.join(', ')} (there is no room for every tone in this shape)
-          </>
-        )}
-        {voicing.inversion > 0 && ' · not in root position: the bass note is not the root'}
-        {' '}· {voicing.fingers === 0 ? 'no fingers needed' : `${voicing.fingers} finger${voicing.fingers === 1 ? '' : 's'}`}
+        {t('chords.tones', { tones: voicing.tones.join(', ') })}
+        {voicing.missing.length > 0 && ` · ${t('chords.omits', { tones: voicing.missing.join(', ') })}`}
+        {voicing.inversion > 0 && ` · ${t('chords.inverted')}`}
+        {` · ${t('chords.fingers', { n: voicing.fingers })}`}
       </p>
     </div>
   );
@@ -138,16 +151,16 @@ function StrumControls({
   const setStrumPreset = useStore((s) => s.setStrumPreset);
   const strumMs = useStore((s) => s.strumMs);
   const setStrumMs = useStore((s) => s.setStrumMs);
+  const t = useT();
 
   return (
     <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
       <div className="field-label" style={{ marginBottom: 6 }}>
-        Play the chord{' '}
-        <Help text="Down starts from the lowest string and sweeps up; up starts from the highest string and sweeps down. Muted strings stay silent." />
+        {t('strum.play')} <Help text={t('strum.play.help')} />
       </div>
       <div className="strum-row">
         <button type="button" className="btn" disabled={disabled} onClick={() => onStrum('normal')}>
-          ▶ Together
+          {t('strum.together')}
         </button>
         <button
           type="button"
@@ -155,54 +168,58 @@ function StrumControls({
           disabled={disabled}
           onClick={() => onStrum('down')}
         >
-          ↓ Down strum
+          {t('strum.down')}
         </button>
         <button type="button" className="btn" disabled={disabled} onClick={() => onStrum('up')}>
-          ↑ Up strum
+          {t('strum.up')}
         </button>
       </div>
 
       <div style={{ marginTop: 14 }}>
         <div className="field-label" style={{ marginBottom: 6 }}>
-          Default strum direction
+          {t('strum.direction')}
         </div>
         <Segmented<StrumMode>
-          label="Default strum direction"
+          label={t('strum.direction')}
           value={strumMode}
           onChange={setStrumMode}
           options={[
-            { value: 'normal', label: 'Together' },
-            { value: 'down', label: 'Down' },
-            { value: 'up', label: 'Up' },
+            { value: 'normal', label: t('strum.mode.normal') },
+            { value: 'down', label: t('strum.mode.down') },
+            { value: 'up', label: t('strum.mode.up') },
           ]}
         />
       </div>
 
       <div style={{ marginTop: 14 }}>
         <div className="field-label" style={{ marginBottom: 6 }}>
-          Strum speed
+          {t('strum.speed')}
         </div>
         <Segmented<StrumPreset>
-          label="Strum speed preset"
+          label={t('strum.speed.preset')}
           value={strumPreset}
           onChange={setStrumPreset}
           options={[
-            { value: 'slow', label: 'Slow' },
-            { value: 'normal', label: 'Normal' },
-            { value: 'fast', label: 'Fast' },
-            { value: 'custom', label: 'Custom' },
+            { value: 'slow', label: t('strum.slow') },
+            { value: 'normal', label: t('strum.normal') },
+            { value: 'fast', label: t('strum.fast') },
+            { value: 'custom', label: t('strum.custom') },
           ]}
         />
         <div style={{ marginTop: 8 }}>
           <Slider
-            label="Gap between strings"
+            label={t('strum.gap')}
             min={0}
             max={160}
             step={1}
             value={strumMs}
             onChange={setStrumMs}
-            format={(v) => `${v} ms`}
-            help={`Slow is ${STRUM_PRESETS.slow} ms, normal ${STRUM_PRESETS.normal} ms, fast ${STRUM_PRESETS.fast} ms between adjacent strings.`}
+            format={(v) => t('strum.ms', { ms: v })}
+            help={t('strum.gap.help', {
+              slow: STRUM_PRESETS.slow,
+              normal: STRUM_PRESETS.normal,
+              fast: STRUM_PRESETS.fast,
+            })}
           />
         </div>
       </div>

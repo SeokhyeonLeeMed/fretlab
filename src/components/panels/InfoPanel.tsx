@@ -11,8 +11,11 @@ import { useMusicContext } from '../../state/selectors';
 import { useStore } from '../../state/store';
 import { spellCollection, spellMidi } from '../../core/theory/spelling';
 import { midiToFreq } from '../../core/theory/pitch';
+import { chordText, tuningText, useLocale, useT } from '../../i18n';
 
 export function InfoPanel() {
+  const t = useT();
+  const locale = useLocale();
   const ctx = useMusicContext();
   const selected = useStore((s) => s.selected);
   const mode = useStore((s) => s.mode);
@@ -28,28 +31,27 @@ export function InfoPanel() {
   const chordNotes = spellCollection(chordRoot, ctx.chord.intervals, ctx.chord.degrees);
 
   return (
-    <Card title="Current selection" id="info">
+    <Card title={t('info.title')} id="info">
       <dl className="info-grid" style={{ margin: 0 }}>
         <div className="info-tile">
-          <dt>Selected note</dt>
+          <dt>{t('info.note')}</dt>
           <dd>{selectedNote ? selectedNote.full : '—'}</dd>
           <div className="sub">
-            {selected && selectedMidi !== null ? (
-              <>
-                String {ctx.instrument.stringCount - selected.stringIndex} ·{' '}
-                {selected.fret === 0 ? 'open' : `fret ${selected.fret}`} ·{' '}
-                {midiToFreq(selectedMidi, a4).toFixed(2)} Hz · MIDI {selectedMidi}
-              </>
-            ) : (
-              'Click or tap anywhere on the fretboard to hear a note.'
-            )}
+            {selected && selectedMidi !== null
+              ? t('info.note.detail', {
+                  string: ctx.instrument.stringCount - selected.stringIndex,
+                  fret: selected.fret === 0 ? t('info.open') : t('info.fret', { n: selected.fret }),
+                  freq: midiToFreq(selectedMidi, a4).toFixed(2),
+                  midi: selectedMidi,
+                })
+              : t('info.note.hint')}
           </div>
         </div>
 
         <div className="info-tile">
-          <dt>Selected scale</dt>
+          <dt>{t('info.scale')}</dt>
           <dd>{ctx.scaleName}</dd>
-          <div className="note-list" aria-label="Notes of the scale">
+          <div className="note-list" aria-label={t('info.scale.notes')}>
             {scaleNotes.map((n, i) => (
               <span key={`${n}-${i}`} className="note-pill" data-root={i === 0}>
                 {n}
@@ -57,15 +59,15 @@ export function InfoPanel() {
             ))}
           </div>
           <div className="sub">
-            {ctx.scale.intervals.length} notes · a pool to play over the chord
-            {mode === 'scale' ? ' · shown on the fretboard' : ''}
+            {t('info.scale.detail', { n: ctx.scale.intervals.length })}
+            {mode === 'scale' ? ` · ${t('info.scale.shown')}` : ''}
           </div>
         </div>
 
         <div className="info-tile">
-          <dt>Selected chord</dt>
+          <dt>{t('info.chord')}</dt>
           <dd>{ctx.chordName}</dd>
-          <div className="note-list" aria-label="Notes of the chord">
+          <div className="note-list" aria-label={t('info.chord.notes')}>
             {chordNotes.map((n, i) => (
               <span key={`${n}-${i}`} className="note-pill" data-root={i === 0}>
                 {n}
@@ -73,39 +75,42 @@ export function InfoPanel() {
             ))}
           </div>
           <div className="sub">
-            {ctx.chord.name} · {ctx.chord.intervals.length} notes played together
-            {mode === 'chord' ? ' · shapes shown on the fretboard' : ''}
+            {t('info.chord.detail', {
+              name: chordText(locale, ctx.chord.id)[0],
+              n: ctx.chord.intervals.length,
+            })}
+            {mode === 'chord' ? ` · ${t('info.chord.shown')}` : ''}
           </div>
         </div>
 
         <div className="info-tile">
-          <dt>Tuning</dt>
+          <dt>{t('info.tuning')}</dt>
           <dd style={{ fontSize: 17 }}>{ctx.tuning.notes.join(' ')}</dd>
           <div className="sub">
-            {ctx.tuning.name.includes('—') ? ctx.tuning.name.split('—')[0].trim() : ctx.tuning.name} ·{' '}
-            {ctx.instrument.name}
+            {tuningText(locale, ctx.tuning.id)} ·{' '}
+            {t(ctx.instrument.id === 'bass4' ? 'instrument.bass4' : 'instrument.guitar6')}
           </div>
         </div>
       </dl>
 
-      <div className="legend" style={{ marginTop: 16 }} aria-label="Marker legend">
+      <div className="legend" style={{ marginTop: 16 }} aria-label={t('legend.label')}>
         <span className="legend-item">
-          <span className="legend-swatch" data-shape="root" /> Root note (square)
+          <span className="legend-swatch" data-shape="root" /> {t('legend.root')}
         </span>
         <span className="legend-item">
-          <span className="legend-swatch" data-shape="scale" /> Scale note (circle)
+          <span className="legend-swatch" data-shape="scale" /> {t('legend.scale')}
         </span>
         <span className="legend-item">
-          <span className="legend-swatch" data-shape="chord" /> Chord tone
+          <span className="legend-swatch" data-shape="chord" /> {t('legend.chord')}
         </span>
         <span className="legend-item">
-          <span className="legend-swatch" data-shape="selected" /> Last played
+          <span className="legend-swatch" data-shape="selected" /> {t('legend.selected')}
         </span>
         <span className="legend-item">
-          <span className="legend-swatch" data-shape="open" /> Faint: outside the scale
+          <span className="legend-swatch" data-shape="open" /> {t('legend.faint')}
         </span>
         <span className="legend-item">
-          <span className="legend-swatch" data-shape="muted" /> ✕ at the nut: muted string
+          <span className="legend-swatch" data-shape="muted" /> {t('legend.muted')}
         </span>
       </div>
     </Card>

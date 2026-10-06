@@ -15,6 +15,8 @@ in the browser — no server, no accounts, no audio files, no paid domain.
   strumming at adjustable speed.
 - **A chromatic tuner** that listens through the microphone, with a camera
   move that travels to the headstock and back.
+- **Six languages**: English, 한국어, 日本語, 简体中文, 繁體中文, Español — the
+  interface and the scale, chord and tuning catalogues alike.
 
 ---
 
@@ -169,8 +171,16 @@ src/
     panels/                   control, info, chord and tuner panels
     ui/controls.tsx           accessible form primitives
 
+  i18n/
+    en.ts                     English interface strings; `Messages` is derived
+                              from this file, so it is the source of truth
+    music-en.ts               English scale, chord and tuning catalogues
+    ko.ts ja.ts es.ts         one file per language, each typed as `Messages`
+    zh-Hans.ts zh-Hant.ts     and `MusicMessages`
+    index.ts                  lookup, the `useT` hook, language detection
+
   hooks/                      the React bindings for the engines
-  tests/                      170 tests
+  tests/                      259 tests
 ```
 
 **State versus derived data.** The store holds only choices — `"guitar6"`,
@@ -184,6 +194,11 @@ the tuner together.
 memoised components, so playing a note re-renders one marker rather than the
 neck. Scrolling and zooming are CSS transforms and native scrolling, not React
 state churn.
+
+**Adding a language** means copying `i18n/en.ts` and `i18n/music-en.ts`,
+translating the values and listing the new locale in `i18n/index.ts`. Both files
+are typed, so anything missed is a compile error rather than a blank label. See
+section 12.5.
 
 **Adding an instrument** means adding one object to `INSTRUMENTS` in
 `core/instruments/definitions.ts` — string count, fret count, tunings, gauges
@@ -298,8 +313,9 @@ sample buffer rather than wired as a live Web Audio feedback loop, because a
 `DelayNode` inside a cycle is quantised to a 128-sample block — that would cap
 usable pitch at about 344 Hz and detune everything above it. Rendering the delay
 line in JavaScript gives sample-accurate fractional delay, and the tests confirm
-every note from a 5-string bass's low B to the 24th fret of a guitar's top E is
-in tune **within 5 cents**, at 44.1, 48 and 96 kHz.
+every note from a 31 Hz B0 — below anything the shipped instruments reach, kept
+as the synthesiser's lower bound — to the 21st fret of a guitar's top E is in
+tune **within 5 cents**, at 44.1, 48 and 96 kHz.
 
 Each rendered note then passes a short EQ chain standing in for the instrument
 body — different for guitar and bass — and a limiter, so a six-string strum does
@@ -344,10 +360,11 @@ rather than merely reversed.
    string"), so nothing depends on colour alone. ±5 cents counts as in tune.
 
 Verified end to end in a real browser by feeding the application a synthesised
-guitar note as its microphone input: open E, a string 12 cents flat, an A string
-20 cents sharp, Drop D's low string reading against D2, and a 5-string bass low
-B at 31 Hz were all identified correctly, with cents deviations accurate to
-within half a cent.
+guitar note as its microphone input. Thirteen cases — every open string of the
+guitar and the bass, a G string 18 cents flat, a B string 25 cents sharp, and
+Drop D's low string reading against D2 rather than E2 — were each identified
+correctly, and the detected frequency equalled the input to the two decimals the
+readout shows.
 
 ### The tuner camera
 
@@ -513,6 +530,44 @@ position — not a default.
 
 ---
 
+### Languages
+
+| Language | Shown in the picker as | `<html lang>` |
+| --- | --- | --- |
+| English | English | `en` |
+| Korean | 한국어 | `ko` |
+| Japanese | 日本語 | `ja` |
+| Simplified Chinese | 简体中文 | `zh-Hans` |
+| Traditional Chinese | 繁體中文 | `zh-Hant` |
+| Spanish | Español | `es` |
+
+Pick a language from the header. On a first visit the browser's own language
+preference is used, and the choice is then remembered with every other setting.
+
+Each language covers the complete interface — including the accessible name of
+every fretboard position, the tuner's readings, the help bubbles and the crash
+screen — and the complete catalogues: all 27 scales, all 21 chord types, their
+one-line descriptions, the group headings and the tuning preset names. Note
+letters (A–G, ♯, ♭) are left alone, because they are written the same way in all
+six languages.
+
+Only the script a language needs is downloaded: choosing Korean, Japanese or
+Chinese injects one Google Fonts link for that script and sets `<html lang>`,
+which is what tells the browser which Han glyph variants to draw. That is why
+Simplified and Traditional Chinese are separate languages here rather than one
+"Chinese" with text converted between them.
+
+Messages that embed a value are written as functions rather than templates with
+holes, so each language can put the number, the note name and the string number
+where its own grammar wants them:
+
+```ts
+// en.ts
+'fretboard.cell': ({ note, string, where }) => `${note}, string ${string}, ${where}`,
+// ja.ts
+'fretboard.cell': ({ note, string, where }) => `${note}、${string}弦、${where}`,
+```
+
 ## 13. Accessibility
 
 - The fretboard is a keyboard-navigable grid: arrow keys move between positions,
@@ -529,13 +584,16 @@ position — not a default.
 - Light and dark themes, both with text contrast meeting WCAG AA.
 - The neck is drawn the way a chord chart reads: **the lowest-pitched string at
   the bottom**, with the body and headstock oriented to match.
+- The accessible names are translated along with everything else, so a screen
+  reader in Korean or Japanese reads the fretboard in that language rather than
+  announcing English inside a Korean page.
 
 ## 14. Settings that are remembered
 
 Stored in `localStorage` under `fretlab.settings.v1`, with no account and no
 backend: instrument, tuning (including custom tunings per instrument), scale and
 root, chord and root, volume, zoom, note-label preference and style, theme,
-strum direction and speed. Tuner mode is deliberately *not* remembered, so
+strum direction and speed, language. Tuner mode is deliberately *not* remembered, so
 reloading never reopens the microphone. If storage is blocked, the application
 runs on defaults and says so.
 
@@ -545,19 +603,20 @@ runs on defaults and says so.
 npm test
 ```
 
-**170 tests, all passing.** They cover the music-theory engine directly and the
+**259 tests, all passing.** They cover the music-theory engine directly and the
 application through its user interface.
 
 | Area | Tests | Examples of what is checked |
 | --- | --- | --- |
 | Pitch (`pitch.test.ts`) | 14 | name ↔ MIDI round trip across the whole range; `midiToFreq` against published values; cents; nearest-note boundaries; malformed names rejected |
 | Spelling (`spelling.test.ts`) | 10 | B♭ major, F♯ major with its E♯, modal spellings, the blues ♭5/♮5 on one letter, C°7's double flat, key-aware fretboard maps |
-| Fretboard (`fretboard.test.ts`) | 24 | every tuning preset of all four instruments; Drop D changes only one string; D standard shifts all six; custom tunings; scale highlighting moving with the tuning; tuning validation |
-| Scales (`scales.test.ts`) | 13 | relative modes sharing one pitch-class set; harmonic vs melodic minor; pentatonics; blues; symmetric scales; degree labels |
-| Chords (`chords.test.ts`) | 20 | every chord type's pitch classes; the voicing search finding real open shapes; **every returned shape verified to sound only the chord it claims**; shapes recalculated per tuning; power chords across 7 instrument/tuning combinations |
+| Fretboard (`fretboard.test.ts`) | 22 | every tuning preset of both instruments; Drop D changes only one string; D standard shifts all six; custom tunings; scale highlighting moving with the tuning; tuning validation |
+| Scales (`scales.test.ts`) | 15 | relative modes sharing one pitch-class set; harmonic vs melodic minor; pentatonics; blues; symmetric scales; degree labels |
+| Chords (`chords.test.ts`) | 34 | every chord type's pitch classes; the voicing search finding real open shapes; **every returned shape verified to sound only the chord it claims**; shapes recalculated per tuning; power chords across 7 instrument/tuning combinations |
 | Audio (`audio.test.ts`) | 13 | rendered notes in tune within 5 cents across both instruments' full ranges and three sample rates; harmonic content (not a sine); decay; determinism |
-| Tuner (`tuner.test.ts`) | 23 | detection of every open string of every standard tuning; a 31 Hz low B; no octave errors; silence and noise rejected; cents deviation; targets following the current tuning |
-| Application (`app.test.tsx`) | 40 | all four instruments; tuning changes recalculating the rendered neck; the custom-tuning editor; chord shapes recalculated per tuning; the Drop D one-finger power chord; down vs up strum ordering; muted strings silent; strum speed; microphone requested only in tuner mode and released on exit; view saved and restored; persistence; keyboard navigation |
+| Tuner (`tuner.test.ts`) | 24 | detection of every open string of every standard tuning; a 31 Hz low B; no octave errors; silence and noise rejected; cents deviation; targets following the current tuning |
+| Translations (`i18n.test.ts`) | 75 | every language covering every interface key, scale, chord, category and tuning id; nothing blank; every message English parameterises still parameterised elsewhere, and still substituting its arguments; no English prose left in the four CJK catalogues; browser-language detection, including `zh-TW`/`zh-HK`/`zh-MO` as Traditional and `zh-CN`/`zh-SG`/`zh` as Simplified |
+| Application (`app.test.tsx`) | 52 | both instruments; tuning changes recalculating the rendered neck; the custom-tuning editor; chord shapes recalculated per tuning; the Drop D one-finger power chord; down vs up strum ordering; muted strings silent; strum speed; microphone requested only in tuner mode and released on exit; view saved and restored; persistence; keyboard navigation |
 
 ### Checks run in a real browser
 

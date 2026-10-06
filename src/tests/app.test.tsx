@@ -224,8 +224,14 @@ describe('the custom tuning editor', () => {
 });
 
 describe('the control panel follows the mode', () => {
+  /**
+   * Only the sidebar's own choosers, so the header's language picker does not
+   * count towards what the mode is meant to show or hide.
+   */
   const comboNames = (): string[] =>
-    screen.getAllByRole('combobox').map((el) => el.getAttribute('aria-labelledby') ?? '');
+    within(document.querySelector('.sidebar') as HTMLElement)
+      .getAllByRole('combobox')
+      .map((el) => el.getAttribute('aria-labelledby') ?? '');
 
   it('hides the scale and chord choosers in Notes mode', () => {
     render(<App />);
@@ -758,5 +764,54 @@ describe('keyboard accessibility', () => {
     for (const el of screen.getAllByRole('switch')) {
       expect(el.getAttribute('aria-labelledby') ?? el.getAttribute('aria-label')).toBeTruthy();
     }
+  });
+});
+
+describe('the language picker', () => {
+  // By id, not by label: the picker's own label is translated too, so after
+  // the first switch there is no longer an English name to search for.
+  const pick = (locale: string): void => {
+    const select = document.getElementById('locale-select') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: locale } });
+  };
+
+  it('translates the interface, the fretboard and the catalogues', () => {
+    render(<App />);
+    expect(screen.getByText('Instrument')).toBeTruthy();
+
+    pick('ko');
+
+    // Panel titles, the music catalogue, and the generated accessible names
+    // for every fretboard position all follow the chosen language.
+    expect(screen.getByText('악기')).toBeTruthy();
+    expect(screen.getByText('기타 · 베이스 지판')).toBeTruthy();
+    expect(screen.queryByText('Instrument')).toBeNull();
+    expect(screen.getByRole('group', { name: '6현 기타 지판' })).toBeTruthy();
+    expect(cellNames()).toContain('E2, 6번 현, 개방현');
+
+    fireEvent.click(screen.getByRole('button', { name: '스케일' }));
+    expect(screen.getByText('스케일 / 모드')).toBeTruthy();
+    // Scale names come from the music catalogue, not the interface strings.
+    expect(within(selectNamed(/스케일 또는 모드/)).getByText('도리안')).toBeTruthy();
+  });
+
+  it('sets the document language so the right script is used', () => {
+    render(<App />);
+    expect(document.documentElement.lang).toBe('en');
+    pick('ja');
+    expect(document.documentElement.lang).toBe('ja');
+    expect(screen.getByText('楽器')).toBeTruthy();
+    pick('zh-Hant');
+    expect(document.documentElement.lang).toBe('zh-Hant');
+  });
+
+  it('remembers the language across a reload', () => {
+    const first = render(<App />);
+    pick('es');
+    expect(screen.getByText('Instrumento')).toBeTruthy();
+    first.unmount();
+
+    const saved = JSON.parse(localStorage.getItem('fretlab.settings.v1') ?? '{}');
+    expect(saved.state.locale).toBe('es');
   });
 });

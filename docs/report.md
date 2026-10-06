@@ -15,14 +15,15 @@ domain.
 | | |
 | --- | --- |
 | **Stack** | React 18, TypeScript 5.6, Vite 5, Zustand 4 |
-| **Instruments** | 6- and 7-string guitar, 4- and 5-string bass |
-| **Tunings** | 32 presets plus a custom tuning editor per instrument |
+| **Instruments** | 6-string guitar, 4-string bass |
+| **Tunings** | 20 presets plus a custom tuning editor per instrument |
 | **Scales** | 27 scales and modes |
 | **Chords** | 21 chord types, including two kinds of power chord |
 | **Audio** | Karplus–Strong plucked-string synthesis, Web Audio API, no samples |
 | **Tuner** | Microphone pitch detection, accurate to about one cent |
-| **Tests** | 170, all passing |
-| **Production bundle** | 236 kB JavaScript (76 kB gzipped), 16 kB CSS |
+| **Languages** | English, 한국어, 日本語, 简体中文, 繁體中文, Español |
+| **Tests** | 259, all passing |
+| **Production bundle** | 393 kB JavaScript (131 kB gzipped), 16 kB CSS |
 | **Deployment** | GitHub Pages workflow included; Cloudflare, Netlify, Vercel configs included |
 | **Cost to run** | Nothing. No backend, no account, no domain. |
 
@@ -39,6 +40,16 @@ tunings correct rather than approximately correct.
 # 2. What was built
 
 ## 2.0 Revisions
+
+### Revision 5
+
+- **The whole interface is available in six languages**: English, Korean,
+  Japanese, Simplified Chinese, Traditional Chinese and Spanish. Every visible
+  string is translated, including the ones nobody sees — the accessible name of
+  each of the 132 fretboard positions, the tuner's spoken readings, the crash
+  screen and the help bubbles — and so are the scale, chord and tuning
+  catalogues, which are the part a learner actually reads. Section 8.6 explains
+  how it is built and what it guarantees.
 
 ### Revision 4
 
@@ -331,13 +342,13 @@ pitch**, not by a fret offset. One piece of code therefore produces:
   hard-coded shape tables get wrong;
 - the **one-finger, flat shape** in Drop D, where all three strings land on the
   same fret;
-- correct shapes on the 7-string guitar in Drop G and on both basses.
+- correct shapes on the bass, whose four strings are all a fourth apart.
 
 A test asserts that across seven instrument-and-tuning combinations and five
 roots, every generated power chord sounds exactly a root and a fifth (plus an
 octave when asked), with the root in the bass.
 
-![A 7-string guitar in Drop G. The tuning, the note names, the highlighting and the chord shapes are all recalculated.](images/03-guitar7-dropg.png)
+![A bass in Drop D. The tuning, the note names, the highlighting and the chord shapes are all recalculated.](images/03-bass-dropd.png)
 
 ## 5.3 Custom tunings
 
@@ -346,7 +357,7 @@ as it is typed, names the offending string when it is wrong, and refuses to
 apply an invalid tuning rather than letting it reach the fretboard. There are
 also one-click transpose-everything-by-a-semitone buttons.
 
-![A 5-string bass. B0 is the lowest open string, at 30.87 Hz, and the headstock layout changes to match the instrument.](images/04-bass5-scale.png)
+![A bass with a scale highlighted across the neck. The headstock layout and the string spacing change with the instrument.](images/04-bass-scale.png)
 
 ---
 
@@ -372,8 +383,9 @@ the loop filter's half-sample of delay accounted for explicitly.
 
 The result is measurably in tune. A test renders every open string and a range
 of fretted notes and measures the fundamental of the rendered audio by
-autocorrelation: **every note is within 5 cents**, from a 5-string bass's low B
-to the 24th fret of a guitar's top E, at 44.1, 48 and 96 kHz.
+autocorrelation: **every note is within 5 cents**, from a 31 Hz B0 — below
+anything the shipped instruments reach, kept as the synthesiser's lower bound —
+to the 21st fret of a guitar's top E, at 44.1, 48 and 96 kHz.
 
 Each note then passes a short EQ chain standing in for the instrument body —
 different for guitar and for bass — and a limiter, so a six-string strum does not
@@ -437,17 +449,27 @@ The tuner was verified end to end in a real browser by feeding the application a
 synthesised guitar note as its microphone input, so everything downstream of the
 operating system's audio driver is the application's real code.
 
-| Input | Expected | Reported by the application |
-| --- | --- | --- |
-| Open low E, in tune | E2, 0 cents | E2, +0.0 cents, "In tune" |
-| Low E, slightly flat | E2, −8.6 cents | E2, −9 cents, "Flat — tighten the string" |
-| A string, sharp | A2, +23.5 cents | A2, +23.4 cents, "Sharp — loosen the string" |
-| D string | D3, +2.0 cents | D3, +2.0 cents, "In tune" |
-| Drop D low string | D2, −9.8 cents | D2, −9.8 cents, target shown as D2, not E2 |
-| 5-string bass low B | B0, +7.4 cents | B0, +7.4 cents, at 31 Hz |
+| Fed in | Detected | Named | Verdict shown |
+| --- | --- | --- | --- |
+| 82.50 Hz | 82.50 Hz | E2, +2.0 cents | ✓ In tune — E2 |
+| 110.00 Hz | 110.00 Hz | A2, +0.0 cents | ✓ In tune — A2 |
+| 147.00 Hz | 147.00 Hz | D3, +2.0 cents | ✓ In tune — D3 |
+| 196.00 Hz | 196.00 Hz | G3, +0.0 cents | ✓ In tune — G3 |
+| 247.00 Hz | 247.00 Hz | B3, +0.4 cents | ✓ In tune — B3 |
+| 329.50 Hz | 329.50 Hz | E4, −0.7 cents | ✓ In tune — E4 |
+| 41.00 Hz (bass low E) | 41.00 Hz | E1, −8.6 cents | ▲ Flat by 9 cents — tighten the string |
+| 55.00 Hz | 55.00 Hz | A1, +0.0 cents | ✓ In tune — A1 |
+| 73.50 Hz | 73.50 Hz | D2, +2.0 cents | ✓ In tune — D2 |
+| 98.00 Hz | 98.00 Hz | G2, +0.0 cents | ✓ In tune — G2 |
+| 194.00 Hz (G3, flat) | 194.00 Hz | G3, −17.7 cents | ▲ Flat by 18 cents — tighten the string |
+| 250.50 Hz (B3, sharp) | 250.50 Hz | B3, +24.8 cents | ▼ Sharp by 25 cents — loosen the string |
+| 73.50 Hz, in Drop D | 73.50 Hz | D2, +2.0 cents | ✓ In tune — D2, targeting D2 rather than E2 |
 
-Every case identified the right note and the right target string, with cents
-deviation accurate to within half a cent.
+**The detected frequency equals the input in every case**, to the two decimal
+places the readout shows. The deviations in the table are the application
+correctly reporting how far the *input* sits from the target: 41.00 Hz really is
+8.6 cents below E1, and the last row confirms the targets follow the tuning
+rather than assuming standard.
 
 ## 7.3 The camera move
 
@@ -518,22 +540,90 @@ chord and root, volume, zoom, label preferences, theme, strum direction and
 speed — all in `localStorage`, with no account and no backend. Tuner mode is
 deliberately *not* persisted, so reloading never reopens the microphone.
 
+## 8.6 Six languages
+
+The interface is offered in **English, 한국어, 日本語, 简体中文, 繁體中文 and
+Español**. The picker is in the header; the choice is saved with every other
+setting, and on a first visit the browser's own language preference is used.
+
+![The interface in Korean, with the scale catalogue translated as well as the controls.](images/09-korean.png)
+
+**One catalogue per language, and the compiler checks it.** English is the
+source of truth: `src/i18n/en.ts` exports an object, and `Messages` is derived
+*from that object* with a mapped type. Every other language is declared as
+`Messages`, so a missing key, a misspelled key or a key left over from a
+deleted feature is a build error rather than a blank label discovered by a
+reader.
+
+**Sentences that embed a value are functions, not templates with holes.** A
+message like "2 frets along, string 6" is written as
+
+```ts
+'fretboard.cell': ({ note, string, where }) => `${note}, ${string}번 현, ${where}`,
+```
+
+so each language puts the number, the note and the string where its own grammar
+wants them. Japanese counts frets with its own counter word, Chinese puts the
+string number before the word for string, and Korean marks it with 번. None of
+that is expressible by substituting into a fixed English word order, which is
+the usual reason translated interfaces read badly.
+
+**The music catalogues are translated, not transliterated.** All 27 scales, all
+21 chord types, the group headings and the "why this scale fits this chord"
+explanations have their own name and their own one-line description in each
+language — the longest part of the work, and the part that decides whether the
+application is actually usable by someone who does not read English. Note
+letters (A–G, ♯, ♭) are left as they are, because that is how they are written
+in every one of these languages.
+
+**Nothing is hard-coded that a reader can see.** The tuning presets keep their
+note letters, which need no translation, and take their name from the catalogue:
+`Drop D — D A D G B E` becomes `드롭 D — D A D G B E`. The scale name shown in
+the information panel is composed in the selector that derives it, so the name
+in the footer, in the panel and in the chooser cannot disagree.
+
+**The cost.** All six catalogues are in the main bundle, which is what took it
+from 236 kB to 393 kB (76 kB to 131 kB gzipped). They could be split and fetched
+on demand, but that would mean the first paint in Korean is in English until the
+catalogue arrives, and it would make the synchronous lookup the crash screen and
+the selectors rely on asynchronous. For a page this size the 55 kB was the
+better trade.
+
+**Scripts are loaded only when needed.** Latin locales download nothing extra.
+Choosing Korean, Japanese or Chinese injects exactly one Google Fonts link for
+that script and sets `<html lang>`, which is also what tells the browser which
+Han glyph variants to draw — the reason Simplified and Traditional Chinese are
+separate locales rather than one "Chinese" with converted text.
+
+**What the tests check.** Beyond the type-level guarantee: that no value is
+blank in any language; that every message English renders through a function is
+still a function elsewhere (a translation that flattened one into a fixed string
+would silently drop a number from the interface); that every such message
+actually interpolates its arguments; that nothing in the four CJK catalogues is
+still ASCII prose left over from a copy of the English; that every scale, chord,
+category and tuning id is covered in every language; that `zh-TW`, `zh-HK` and
+`zh-MO` detect as Traditional while `zh-CN`, `zh-SG` and a bare `zh` detect as
+Simplified; and, driving the real application, that switching the picker
+retranslates the panels, the catalogue and all 132 fretboard position names,
+sets the document language, and survives a reload.
+
 ---
 
 # 9. Testing results
 
-`npm test` — **170 tests, 8 files, all passing** in about 12 seconds.
+`npm test` — **259 tests, 9 files, all passing** in about a minute.
 
 | Area | Tests | What is checked |
 | --- | --- | --- |
 | Pitch | 14 | name ↔ MIDI round trip over the whole range; frequencies against published values; cents; nearest-note boundaries; malformed names rejected |
 | Spelling | 10 | B♭ major; F♯ major with its E♯; modal spellings; the blues ♭5/♮5 on one letter; C°7's double flat; key-aware fretboard maps |
-| Fretboard | 24 | every tuning preset of all four instruments; Drop D changing only one string; D standard shifting all six; custom tunings; highlighting moving with the tuning; tuning validation |
-| Scales | 13 | relative modes sharing one pitch-class set; harmonic vs melodic minor; pentatonics; blues; symmetric scales; degree labels |
-| Chords | 20 | every chord type's pitch classes; the solver finding real open shapes; **every returned shape verified to sound only the chord it claims**; shapes recalculated per tuning; power chords across seven instrument/tuning combinations |
+| Fretboard | 22 | every tuning preset of both instruments; Drop D changing only one string; D standard shifting all six; custom tunings; highlighting moving with the tuning; tuning validation |
+| Scales | 15 | relative modes sharing one pitch-class set; harmonic vs melodic minor; pentatonics; blues; symmetric scales; degree labels |
+| Chords | 34 | every chord type's pitch classes; the solver finding real open shapes; **every returned shape verified to sound only the chord it claims**; shapes recalculated per tuning; power chords across seven instrument/tuning combinations |
 | Audio | 13 | rendered notes in tune within 5 cents across both instruments' ranges and three sample rates; harmonic content; decay; determinism |
-| Tuner | 23 | every open string of every standard tuning; a 31 Hz low B; no octave errors; silence and noise rejected; cents; targets following the current tuning |
-| Application | 40 | all four instruments; tuning changes recalculating the rendered neck; the custom-tuning editor; chord shapes per tuning; the Drop D one-finger power chord; down vs up strum ordering; muted strings silent; strum speed; microphone requested only in tuner mode and released on exit; view saved and restored; persistence; keyboard navigation |
+| Tuner | 24 | every open string of every standard tuning; a 31 Hz low B; no octave errors; silence and noise rejected; cents; targets following the current tuning |
+| Translations | 75 | every language covering every interface key, scale, chord, category and tuning; no blank values; parameterised messages still parameterised and still substituting; no English left in the CJK catalogues; browser-language detection, including the Chinese variants |
+| Application | 52 | both instruments; tuning changes recalculating the rendered neck; the custom-tuning editor; chord shapes per tuning; the Drop D one-finger power chord; down vs up strum ordering; muted strings silent; strum speed; microphone requested only in tuner mode and released on exit; view saved and restored; persistence; keyboard navigation |
 
 The application tests render the real application in jsdom and drive it the way
 a visitor would, rather than testing a stub.
@@ -559,9 +649,9 @@ Three scripts in `tools/` drive the built application in Chrome. They confirmed:
 | Run locally | `npm run dev`, verified |
 | Fix build and console errors | No build errors, no console errors |
 | Tuning changes recalculate fret notes | Verified by unit and UI tests |
-| All four instrument configurations | Verified, each separately |
-| 7-string guitar separately | Verified, including Drop G |
-| 5-string bass separately | Verified, including the 31 Hz low B |
+| Both instrument configurations | Verified, each separately |
+| Bass separately | Verified, including Drop D and its 41 Hz low E |
+| Every language | Verified: 75 translation tests, and the interface driven in Korean |
 | Scale highlighting | Verified |
 | Note playback | Verified in a real browser |
 | Chord playback | Verified in a real browser |
@@ -622,10 +712,11 @@ denied microphone in each major browser.
 
 | Instrument | Strings | Frets | Default tuning | Presets |
 | --- | --- | --- | --- | --- |
-| 6-string guitar | 6 | 22 | E2 A2 D3 G3 B3 E4 | 13 + custom |
-| 7-string guitar | 7 | 24 | B1 E2 A2 D3 G3 B3 E4 | 7 + custom |
+| 6-string guitar | 6 | 21 | E2 A2 D3 G3 B3 E4 | 13 + custom |
 | 4-string bass | 4 | 21 | E1 A1 D2 G2 | 7 + custom |
-| 5-string bass | 5 | 22 | B0 E1 A1 D2 G2 | 5 + custom |
+
+The 7-string guitar and 5-string bass were removed in revision 3, at the
+client's request.
 
 ## 11.2 Tuning presets
 
@@ -633,14 +724,11 @@ denied microphone in each major browser.
 standard, Drop D, Drop C♯, Drop C, Drop B, Drop A, Open G, Open D, Open E,
 DADGAD, plus custom.
 
-**7-string guitar** — Standard (B E A D G B E), Half step down, A standard,
-Drop A, Drop G, Drop G♯, Russian/Lydian 7, plus custom.
-
 **4-string bass** — Standard (E A D G), Half step down, D standard, Drop D,
 Drop C, BEAD, Tenor, plus custom.
 
-**5-string bass** — Standard (B E A D G), Half step down, whole step down,
-Drop A, Tenor, plus custom.
+Every preset name is translated; the open-string letters are not, because they
+are written the same way in all six languages.
 
 ## 11.3 Scales and modes (27)
 
@@ -668,6 +756,22 @@ calculated for whatever tuning is active.
 
 ---
 
+## 11.5 Languages
+
+| Language | Picker reads | Document language |
+| --- | --- | --- |
+| English | English | `en` |
+| Korean | 한국어 | `ko` |
+| Japanese | 日本語 | `ja` |
+| Simplified Chinese | 简体中文 | `zh-Hans` |
+| Traditional Chinese | 繁體中文 | `zh-Hant` |
+| Spanish | Español | `es` |
+
+Each covers the complete interface and the complete scale, chord and tuning
+catalogues.
+
+---
+
 # 12. Honest limitations
 
 A few things are worth stating plainly rather than leaving to be discovered.
@@ -689,13 +793,21 @@ A few things are worth stating plainly rather than leaving to be discovered.
   signal path was verified instead by feeding the application a synthesised note
   as a genuine `MediaStream`, which exercises everything except the operating
   system's audio driver.
+- **The translations have not been reviewed by a native speaker.** They are
+  mine. The interface strings are straightforward; the music terminology is
+  where a reviewer would earn their keep, since several terms have both a
+  borrowed and a native form in Korean and Japanese and the choice between them
+  is a question of what learners in each country actually say. Each language is
+  one file, so a correction is a one-line change.
 - **Playback is synthesis, not a recording.** It is a convincing plucked string
   rather than a studio-recorded guitar, which is the deliberate trade for having
   no audio files and no licensing questions.
 
 ## 12.1 Natural next steps
 
-Adding an 8-string guitar, a 6-string bass or a ukulele is a data change only.
+Adding an 8-string guitar, a 6-string bass or a ukulele is a data change only,
+and so is a seventh language: copy `src/i18n/en.ts` and its music catalogue,
+translate the values, and the compiler names anything missed.
 Beyond that, the obvious additions would be chord progressions with playback,
 a metronome, saving custom scales, and exporting a chord diagram as an image.
 
@@ -709,6 +821,7 @@ a metronome, saving custom scales, and exporting a chord diagram as an image.
 | Documentation | `README.md` — install, run, build, deploy, microphone, browser support, architecture, engine explanations, full catalogues, test results |
 | This report | `docs/report.md`, `docs/FretLab-report.docx`, `docs/FretLab-report.pdf` |
 | Deployment | `.github/workflows/deploy.yml`, `netlify.toml`, `vercel.json` |
+| Languages | `src/i18n/` — one file per language, plus the English source of truth |
 | Browser check scripts | `tools/screenshots.mjs`, `tools/audio-check.mjs`, `tools/tuner-check.mjs`, `tools/catalogue.mjs` |
 | Screenshots | `docs/images/` |
 

@@ -6,8 +6,12 @@
    ========================================================================== */
 
 :root {
+  /* Noto Sans covers Latin. The CJK families are listed after it so a Korean,
+     Japanese or Chinese glyph falls through to whichever script font the page
+     loaded for the current language (see applyLocaleToDocument). */
   --font-sans: 'Noto Sans', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial,
-    'Noto Sans KR', sans-serif;
+    'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans TC', 'Malgun Gothic',
+    'Yu Gothic UI', 'Microsoft YaHei', 'Microsoft JhengHei', sans-serif;
   --font-mono: 'Noto Sans Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   --radius-sm: 6px;

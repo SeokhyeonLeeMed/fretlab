@@ -8,6 +8,7 @@ import { usePlayback } from '../../hooks/usePlayback';
 import { storageAvailable } from '../../state/persist';
 import { useMemo } from 'react';
 import type { LabelStyle } from '../../state/store';
+import { useT } from '../../i18n';
 
 export function AudioControls() {
   const volume = useStore((s) => s.volume);
@@ -25,20 +26,21 @@ export function AudioControls() {
   const setA4 = useStore((s) => s.setA4);
 
   const { audioError, stop } = usePlayback();
+  const t = useT();
   const canPersist = useMemo(storageAvailable, []);
 
   return (
-    <Card title="Sound &amp; display" id="audio">
+    <Card title={t('audio.title')} id="audio">
       {audioError && (
         <div style={{ marginBottom: 12 }}>
-          <Notice kind="error" title="Audio problem">
+          <Notice kind="error" title={t('audio.problem')}>
             {audioError}
           </Notice>
         </div>
       )}
 
       <Slider
-        label="Volume"
+        label={t('audio.volume')}
         min={0}
         max={1}
         step={0.01}
@@ -48,14 +50,14 @@ export function AudioControls() {
       />
 
       <Slider
-        label="Reference pitch"
+        label={t('audio.a4')}
         min={392}
         max={466}
         step={1}
         value={a4}
         onChange={setA4}
-        format={(v) => `A4 = ${v} Hz`}
-        help="Concert pitch. Everything follows it: the notes you play, the tuner's targets and the frequencies shown. 440 Hz is standard; 432 and 415 Hz are also used."
+        format={(v) => t('audio.a4.value', { hz: v })}
+        help={t('audio.a4.help')}
       />
       <div className="chip-row" style={{ marginTop: -4, marginBottom: 12 }}>
         {[415, 432, 440, 442].map((hz) => (
@@ -73,62 +75,60 @@ export function AudioControls() {
       </div>
 
       <Slider
-        label="Fretboard zoom"
+        label={t('audio.zoom')}
         min={ZOOM_MIN}
         max={ZOOM_MAX}
         step={0.05}
         value={zoom}
         onChange={setZoom}
         format={(v) => `${Math.round(v * 100)}%`}
-        help="You can also pinch on a touch screen, or hold Ctrl and scroll."
+        help={t('audio.zoom.help')}
       />
 
       <Switch
-        label="Show note labels"
+        label={t('audio.labels')}
         checked={showLabels}
         onChange={toggleLabels}
-        help="Turns the text inside each marker on or off. Marker shape and colour stay."
+        help={t('audio.labels.help')}
       />
 
       <div className="field" style={{ marginTop: 8 }}>
-        <span className="field-label">Label style</span>
+        <span className="field-label">{t('audio.labelStyle')}</span>
         <Segmented<LabelStyle>
-          label="Label style"
+          label={t('audio.labelStyle')}
           value={labelStyle}
           onChange={setLabelStyle}
           options={[
-            { value: 'note', label: 'Note names', title: 'E, F#, G…' },
-            { value: 'degree', label: 'Degrees', title: '1, ♭3, 5…' },
+            { value: 'note', label: t('audio.labelStyle.note'), title: t('audio.labelStyle.note.help') },
+            { value: 'degree', label: t('audio.labelStyle.degree'), title: t('audio.labelStyle.degree.help') },
           ]}
         />
       </div>
 
       <Switch
-        label="Show notes outside the scale"
+        label={t('audio.showOutside')}
         checked={showNonScaleNotes}
         onChange={setShowNonScaleNotes}
-        help="Keeps the remaining positions faintly visible so you can still click them."
+        help={t('audio.showOutside.help')}
       />
 
       <div className="strum-row" style={{ marginTop: 14 }}>
         <button type="button" className="btn btn-sm" onClick={stop}>
-          Stop all sound
+          {t('audio.stop')}
         </button>
         <button
           type="button"
           className="btn btn-sm"
           onClick={() => {
-            if (confirm('Reset every FretLab setting to its default?')) reset();
+            if (confirm(t('audio.reset.confirm'))) reset();
           }}
         >
-          Reset settings
+          {t('audio.reset')}
         </button>
       </div>
 
       <p className="field-hint" style={{ marginTop: 10 }}>
-        {canPersist
-          ? 'Your instrument, tuning, scale, theme and audio settings are remembered in this browser. No account, no server.'
-          : 'This browser is blocking local storage, so settings will reset when you reload.'}
+        {canPersist ? t('audio.persist.yes') : t('audio.persist.no')}
       </p>
     </Card>
   );

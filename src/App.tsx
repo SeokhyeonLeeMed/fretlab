@@ -22,8 +22,10 @@ import { usePlayback } from './hooks/usePlayback';
 import { useTunerLifecycle, useTunerReadings } from './hooks/useTuner';
 import { Notice } from './components/ui/controls';
 import { audioEngine } from './core/audio/AudioEngine';
-
+import { applyLocaleToDocument, useT } from './i18n';
 export function App() {
+  const t = useT();
+  const locale = useStore((s) => s.locale);
   const ctx = useMusicContext();
   const mode = useStore((s) => s.mode);
   const theme = useStore((s) => s.theme);
@@ -45,6 +47,12 @@ export function App() {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
+  // The language sets <html lang> and pulls in a Noto script when the locale
+  // needs one, so Latin locales download no extra font.
+  useEffect(() => {
+    applyLocaleToDocument(locale);
+  }, [locale]);
+
   // Release the audio hardware when the page goes away.
   useEffect(() => () => void audioEngine.close(), []);
 
@@ -53,18 +61,18 @@ export function App() {
   return (
     <div className="app">
       <a className="skip-link" href="#stage">
-        Skip to the fretboard
+        {t('app.skipToFretboard')}
       </a>
       <Header />
 
       <main className="app-main">
-        <div className="sidebar" aria-label="Controls">
+        <div className="sidebar" aria-label={t('stage.controls')}>
           <ControlPanel />
           <AudioControls />
         </div>
 
         <div className="stage-column">
-          <section id="stage" aria-label="Instrument view">
+          <section id="stage" aria-label={t('stage.label')}>
             <InstrumentStage
               geo={geo}
               overlay={<TunerPanel visible={mode === 'tuner'} />}
@@ -75,7 +83,7 @@ export function App() {
                     className="btn btn-sm"
                     onClick={() => setZoom(zoom - 0.15)}
                     disabled={mode === 'tuner' || zoom <= ZOOM_MIN}
-                    aria-label="Zoom out"
+                    aria-label={t('stage.zoomOut')}
                   >
                     −
                   </button>
@@ -87,7 +95,7 @@ export function App() {
                     className="btn btn-sm"
                     onClick={() => setZoom(zoom + 0.15)}
                     disabled={mode === 'tuner' || zoom >= ZOOM_MAX}
-                    aria-label="Zoom in"
+                    aria-label={t('stage.zoomIn')}
                   >
                     +
                   </button>
@@ -96,9 +104,9 @@ export function App() {
                     className="btn btn-sm"
                     onClick={() => setZoom(1)}
                     disabled={mode === 'tuner'}
-                    title="Back to 100%"
+                    title={t('stage.reset.help')}
                   >
-                    Reset
+                    {t('stage.reset')}
                   </button>
                   <button
                     type="button"
@@ -115,15 +123,13 @@ export function App() {
                       });
                     }}
                     disabled={mode === 'tuner'}
-                    title="Zoom out to show the whole instrument"
+                    title={t('stage.whole.help')}
                   >
-                    Whole instrument
+                    {t('stage.whole')}
                   </button>
                   <div className="spacer" />
                   <span className="stage-hint">
-                    {mode === 'tuner'
-                      ? 'Tuner mode: the view is parked on the headstock. Closing it restores your previous position and zoom.'
-                      : 'Scroll sideways to move along the neck · pinch or Ctrl+scroll to zoom · click a position to hear it'}
+                    {mode === 'tuner' ? t('stage.hint.tuner') : t('stage.hint')}
                   </span>
                 </>
               }
@@ -152,11 +158,7 @@ export function App() {
           </section>
 
           {!audioReady && (
-            <Notice title="Sound starts on your first click">
-              Browsers only allow audio after a real interaction, so the first position you click
-              also starts the audio engine. Everything is synthesised in the page — there are no
-              audio files to download.
-            </Notice>
+            <Notice title={t('audio.firstClick.title')}>{t('audio.firstClick.body')}</Notice>
           )}
 
           <InfoPanel />
@@ -165,12 +167,10 @@ export function App() {
       </main>
 
       <footer className="app-footer">
+        <span>{t('footer.note')}</span>
         <span>
-          FretLab — all note names, scales, chord shapes and tuner targets are calculated from the
-          selected tuning.
-        </span>
-        <span>
-          {ctx.instrument.name} · {ctx.tuning.notes.join(' ')} · {ctx.scaleName}
+          {t(ctx.instrument.id === 'bass4' ? 'instrument.bass4' : 'instrument.guitar6')} ·{' '}
+          {ctx.tuning.notes.join(' ')} · {ctx.scaleName}
         </span>
       </footer>
     </div>

@@ -1,22 +1,27 @@
 /**
- * Header.tsx — identity, the four interaction modes, and the theme switch.
+ * Header.tsx — identity, the four interaction modes, the language picker and
+ * the theme switch.
  */
 
 import { useStore, type Mode, type Theme } from '../state/store';
 import { Segmented } from './ui/controls';
-
-const MODES: { value: Mode; label: string; title: string }[] = [
-  { value: 'normal', label: 'Notes', title: 'Click any position to hear the note it produces' },
-  { value: 'scale', label: 'Scale', title: 'Highlight a scale or mode across the whole neck' },
-  { value: 'chord', label: 'Chords', title: 'Show calculated chord shapes and strum them' },
-  { value: 'tuner', label: 'Tuner', title: 'Move the view to the headstock and tune by microphone' },
-];
+import { LOCALES, localeName, useT, type Locale } from '../i18n';
 
 export function Header() {
   const mode = useStore((s) => s.mode);
   const setMode = useStore((s) => s.setMode);
   const theme = useStore((s) => s.theme);
   const setTheme = useStore((s) => s.setTheme);
+  const locale = useStore((s) => s.locale);
+  const setLocale = useStore((s) => s.setLocale);
+  const t = useT();
+
+  const modes: { value: Mode; label: string; title: string }[] = [
+    { value: 'normal', label: t('mode.normal'), title: t('mode.normal.help') },
+    { value: 'scale', label: t('mode.scale'), title: t('mode.scale.help') },
+    { value: 'chord', label: t('mode.chord'), title: t('mode.chord.help') },
+    { value: 'tuner', label: t('mode.tuner'), title: t('mode.tuner.help') },
+  ];
 
   return (
     <header className="app-header">
@@ -33,25 +38,42 @@ export function Header() {
         <span>
           FretLab
           <span className="logo-sub" style={{ display: 'block' }}>
-            guitar &amp; bass fretboard
+            {t('app.tagline')}
           </span>
         </span>
       </div>
 
-      <nav aria-label="Interaction mode" style={{ minWidth: 280, flex: '1 1 300px', maxWidth: 460 }}>
-        <Segmented<Mode> label="Interaction mode" value={mode} onChange={setMode} options={MODES} />
+      <nav aria-label={t('mode.label')} style={{ minWidth: 280, flex: '1 1 300px', maxWidth: 460 }}>
+        <Segmented<Mode> label={t('mode.label')} value={mode} onChange={setMode} options={modes} />
       </nav>
 
       <div className="header-spacer" />
 
       <div className="header-tools">
+        <label className="visually-hidden" htmlFor="locale-select">
+          {t('lang.label')}
+        </label>
+        <select
+          id="locale-select"
+          className="select"
+          style={{ width: 'auto', minWidth: 132 }}
+          value={locale}
+          onChange={(e) => setLocale(e.target.value as Locale)}
+          aria-label={t('lang.label')}
+        >
+          {LOCALES.map((l) => (
+            <option key={l} value={l}>
+              {localeName(l)}
+            </option>
+          ))}
+        </select>
         <Segmented<Theme>
-          label="Colour theme"
+          label={t('theme.label')}
           value={theme}
           onChange={setTheme}
           options={[
-            { value: 'dark', label: 'Dark' },
-            { value: 'light', label: 'Light' },
+            { value: 'dark', label: t('theme.dark') },
+            { value: 'light', label: t('theme.light') },
           ]}
         />
       </div>

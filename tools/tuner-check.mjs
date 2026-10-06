@@ -67,7 +67,7 @@ for (const c of cases) {
 
   await page.goto('http://localhost:4173/', { waitUntil: 'networkidle' });
   if (c.instrument) await page.getByRole('button', { name: new RegExp(`^${c.instrument[0]}$`) }).click();
-  if (c.tuning) await page.selectOption('select >> nth=0', c.tuning);
+  if (c.tuning) await page.getByRole('combobox', { name: /Preset/ }).selectOption(c.tuning);
   await page.getByRole('button', { name: 'Tuner', exact: true }).click();
   await page.waitForTimeout(2200);
 

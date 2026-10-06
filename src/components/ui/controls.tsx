@@ -7,7 +7,7 @@
  */
 
 import { type ReactNode, useId } from 'react';
-
+import { useT } from '../../i18n';
 export function Card({
   title,
   action,
@@ -33,8 +33,9 @@ export function Card({
 }
 
 export function Help({ text }: { text: string }) {
+  const t = useT();
   return (
-    <span className="help" tabIndex={0} role="note" title={text} aria-label={`Help: ${text}`}>
+    <span className="help" tabIndex={0} role="note" title={text} aria-label={t('help.prefix', { text })}>
       ?
     </span>
   );

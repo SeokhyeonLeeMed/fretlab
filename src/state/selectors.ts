@@ -31,6 +31,7 @@ import {
 } from '../core/theory/chords';
 import { findPowerChords, findVoicings, type Voicing } from '../core/theory/voicing';
 import { noteNameToPc } from '../core/theory/pitch';
+import { scaleText } from '../i18n';
 
 /** Root choices, including both spellings of every black key. */
 export const ROOT_OPTIONS = [
@@ -111,7 +112,7 @@ export function buildMusicContext(state: AppState): MusicContext {
     scalePcs: scalePitchClasses(state.scaleRoot, scale),
     scaleDegrees: scaleDegreeLabels(state.scaleRoot, scale),
     scaleRootPc: noteNameToPc(state.scaleRoot),
-    scaleName: `${state.scaleRoot} ${scale.name}`,
+    scaleName: `${state.scaleRoot} ${scaleText(state.locale, scale.id)[0]}`,
     chord,
     chordPcs,
     chordDegrees: chordDegreeLabels(state.chordRoot, chord),
@@ -133,10 +134,12 @@ export function useMusicContext(): MusicContext {
   const scaleId = useStore((s) => s.scaleId);
   const chordRoot = useStore((s) => s.chordRoot);
   const chordId = useStore((s) => s.chordId);
+  // The language is a dependency because the scale's display name is translated.
+  const locale = useStore((s) => s.locale);
 
   return useMemo(
     () => buildMusicContext(useStore.getState()),
-    [instrumentId, tuningId, customTunings, mode, scaleRoot, scaleId, chordRoot, chordId],
+    [instrumentId, tuningId, customTunings, mode, scaleRoot, scaleId, chordRoot, chordId, locale],
   );
 }
 
