@@ -15,9 +15,12 @@ permissions:
   pages: write
   id-token: write
 
+# Only one deployment at a time, but never cancel one that is already
+# running: a half-finished deploy would leave the site on an older build.
+# A push arriving while another run is in flight waits its turn instead.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
