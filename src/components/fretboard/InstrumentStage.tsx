@@ -21,10 +21,10 @@ import { useStore } from '../../state/store';
  * Tuned so a desktop stage shows roughly the first twelve frets at 100%,
  * which is the span most playing actually happens in.
  */
-const HEIGHT_RATIO = 0.26;
+const HEIGHT_RATIO = 0.36;
 /** Tall enough that the strings stay far enough apart to tap on a phone. */
-const MIN_HEIGHT = 240;
-const MAX_HEIGHT = 330;
+const MIN_HEIGHT = 320;
+const MAX_HEIGHT = 450;
 /** Must match --camera-transition in global.css. */
 const CAMERA_MS = 820;
 

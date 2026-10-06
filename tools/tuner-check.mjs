@@ -20,7 +20,7 @@ const cases = [
   { name: 'A string, 20 cents sharp', freq: A2 * 2 ** (20 / 1200), instrument: null, tuning: null, note: 'A2', cents: 20 },
   { name: 'D string, in tune', freq: D3, instrument: null, tuning: null, note: 'D3', cents: 0 },
   { name: 'Drop D: low string reads against D2', freq: (E2 / 2) * 2 ** (10 / 12) * 2 ** (-8 / 1200), instrument: null, tuning: 'drop-d', note: 'D2', cents: -8 },
-  { name: '5-string bass low B', freq: B0 * 2 ** (6 / 1200), instrument: 'Bass 5', tuning: null, note: 'B0', cents: 6 },
+  { name: '5-string bass low B', freq: B0 * 2 ** (6 / 1200), instrument: ['Bass', '5-string'], tuning: null, note: 'B0', cents: 6 },
 ];
 
 const browser = await chromium.launch({
@@ -63,7 +63,10 @@ for (const c of cases) {
   }, c.freq);
 
   await page.goto('http://localhost:4173/', { waitUntil: 'networkidle' });
-  if (c.instrument) await page.getByRole('button', { name: c.instrument }).click();
+  if (c.instrument) {
+    await page.getByRole('button', { name: c.instrument[0], exact: true }).click();
+    await page.getByRole('button', { name: c.instrument[1] }).click();
+  }
   if (c.tuning) await page.selectOption('select >> nth=0', c.tuning);
   await page.getByRole('button', { name: 'Tuner', exact: true }).click();
   await page.waitForTimeout(2200);

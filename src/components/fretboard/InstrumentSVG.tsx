@@ -9,7 +9,7 @@
  */
 
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
-import { CENTRE_Y as CENTRE_LINE, type Geometry } from './geometry';
+import { CENTRE_Y as CENTRE_LINE, smoothPath, type Geometry } from './geometry';
 import { inlayKind } from '../../core/theory/fretboard';
 import { spellMidi, type SpellingMap } from '../../core/theory/spelling';
 import { mod } from '../../core/theory/pitch';
@@ -206,16 +206,7 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
           <stop offset="0" stopColor={lighten(d.fretboardColor, 0.14)} />
           <stop offset="1" stopColor={darken(d.fretboardColor, 0.24)} />
         </linearGradient>
-        <linearGradient id="fl-fret" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#f2f4f7" />
-          <stop offset="0.5" stopColor="#b9bfc9" />
-          <stop offset="1" stopColor="#7d848f" />
-        </linearGradient>
-        <linearGradient id="fl-string" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#f6f7f9" />
-          <stop offset="0.5" stopColor="#c3c8d0" />
-          <stop offset="1" stopColor="#8d949e" />
-        </linearGradient>
+
       </defs>
 
       {/* ---- body ------------------------------------------------------- */}
@@ -239,17 +230,41 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
           strokeWidth={9}
           strokeLinecap="round"
         />
-        {/* Fret wires */}
+        {/* Fret wires. Drawn as a dark seat with a bright crown on top:
+            solid colours, because a gradient in objectBoundingBox units
+            cannot paint a shape with zero bounding-box width. */}
+        {frets.slice(1).map((f) => {
+          const fx = geo.fretX(f);
+          const w = f < 6 ? 4.4 : f < 13 ? 3.8 : 3.2;
+          return (
+            <g key={f}>
+              <line
+                x1={fx}
+                y1={CENTRE(geo, fx, -1) - 1}
+                x2={fx}
+                y2={CENTRE(geo, fx, 1) + 1}
+                stroke="#5e636b"
+                strokeWidth={w}
+                strokeLinecap="round"
+              />
+              <line
+                x1={fx - w * 0.22}
+                y1={CENTRE(geo, fx, -1) - 1}
+                x2={fx - w * 0.22}
+                y2={CENTRE(geo, fx, 1) + 1}
+                stroke="#e8ecf2"
+                strokeWidth={w * 0.42}
+                strokeLinecap="round"
+              />
+            </g>
+          );
+        })}
+        {/* Fret ends, so the wire reads as metal set into the wood. */}
         {frets.slice(1).map((f) => (
-          <line
-            key={f}
-            x1={geo.fretX(f)}
-            y1={CENTRE(geo, geo.fretX(f), -1) - 1}
-            x2={geo.fretX(f)}
-            y2={CENTRE(geo, geo.fretX(f), 1) + 1}
-            stroke="url(#fl-fret)"
-            strokeWidth={f < 6 ? 4 : 3}
-          />
+          <g key={`end${f}`}>
+            <circle cx={geo.fretX(f)} cy={CENTRE(geo, geo.fretX(f), -1)} r={1.9} fill="#d7dce3" />
+            <circle cx={geo.fretX(f)} cy={CENTRE(geo, geo.fretX(f), 1)} r={1.9} fill="#d7dce3" />
+          </g>
         ))}
         {/* Position inlays */}
         {frets.map((f) => {
@@ -277,36 +292,41 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
           const state = target?.state ?? 'idle';
           return (
             <g key={peg.stringIndex}>
+              {/* Post stem, from the string's own height down to the button. */}
               <line
-                x1={peg.x}
-                y1={peg.y}
-                x2={peg.postX}
-                y2={peg.postY}
-                stroke="#9aa2ad"
-                strokeWidth={3}
+                x1={peg.postX}
+                y1={peg.postY}
+                x2={peg.x}
+                y2={peg.y}
+                stroke="#8f98a4"
+                strokeWidth={4}
+                strokeLinecap="round"
               />
-              <circle cx={peg.postX} cy={peg.postY} r={5} fill="#b7bec8" />
+              <circle cx={peg.postX} cy={peg.postY} r={5.5} fill="#b9c1cc" stroke="#767f8b" strokeWidth={1.2} />
+              <circle cx={peg.postX} cy={peg.postY} r={2} fill="#6f7884" />
               {state !== 'idle' && (
                 <circle
                   cx={peg.x}
                   cy={peg.y}
-                  r={17}
+                  r={18}
                   fill="none"
                   stroke={state === 'in-tune' ? 'var(--ok)' : 'var(--accent)'}
                   strokeWidth={3}
                   opacity={0.9}
                 />
               )}
+              {/* Tuner button. */}
               <ellipse
                 cx={peg.x}
                 cy={peg.y}
-                rx={11}
-                ry={7}
-                fill={state === 'in-tune' ? 'var(--ok)' : '#c9d0da'}
+                rx={13}
+                ry={7.5}
+                fill={state === 'in-tune' ? 'var(--ok)' : '#ccd3dd'}
                 stroke="#6f7884"
                 strokeWidth={1.5}
-                transform={`rotate(${peg.side === 'top' ? -24 : 24} ${peg.x} ${peg.y})`}
+                transform={`rotate(18 ${peg.x} ${peg.y})`}
               />
+              <ellipse cx={peg.x} cy={peg.y} rx={5} ry={3} fill="#9aa3af" opacity={0.6} transform={`rotate(18 ${peg.x} ${peg.y})`} />
             </g>
           );
         })}
@@ -322,8 +342,15 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
               <polyline
                 points={`${peg.postX},${peg.postY} ${geo.nutX},${geo.stringY(i, geo.nutX)} ${geo.bridgeX},${geo.stringY(i, geo.bridgeX)}`}
                 fill="none"
-                stroke="url(#fl-string)"
+                stroke="#6d737c"
                 strokeWidth={geo.stringWidth(i)}
+                strokeLinecap="round"
+              />
+              <polyline
+                points={`${peg.postX},${peg.postY} ${geo.nutX},${geo.stringY(i, geo.nutX)} ${geo.bridgeX},${geo.stringY(i, geo.bridgeX)}`}
+                fill="none"
+                stroke="#e9edf3"
+                strokeWidth={geo.stringWidth(i) * 0.45}
                 strokeLinecap="round"
               />
               {mutedInChord && (
@@ -402,7 +429,7 @@ const CENTRE = (geo: Geometry, x: number, sign: -1 | 1): number => CENTRE_LINE +
 /** The tapered fretboard, from the nut to where it meets the body. */
 function neckPath(geo: Geometry): string {
   const x0 = geo.nutX;
-  const x1 = geo.bodyX0 + 150;
+  const x1 = geo.neckJoinX;
   return [
     `M ${x0} ${CENTRE(geo, x0, -1)}`,
     `L ${x1} ${CENTRE(geo, x1, -1)}`,
@@ -412,73 +439,156 @@ function neckPath(geo: Geometry): string {
   ].join(' ');
 }
 
-/** Pickups, bridge and controls: enough to read as an instrument. */
+/**
+ * Pickguard, pickups, bridge and controls.
+ *
+ * Everything is placed in the body's own normalised 1000 x 700 box, the same
+ * coordinates the silhouette is traced in, so the hardware moves with the
+ * shape instead of being pinned to magic world coordinates. The bridge is the
+ * exception: it is aligned to the real bridge position, because that is where
+ * the strings actually terminate.
+ */
 function BodyHardware({ geo }: { geo: Geometry }) {
   const d = geo.instrument.display;
-  const half = geo.neckHalf(geo.bodyX0 + 150) * 1.05;
-  const pickupX1 = geo.bodyX0 + 215;
-  const pickupX2 = geo.bodyX0 + 300;
-  const bridgeX = Math.min(geo.bridgeX, geo.bodyX1 - 60);
+  const isBass = geo.instrument.family === 'bass';
+  const strings = geo.stringCount;
+  const P = (nx: number, ny: number): [number, number] => geo.bodyPoint(nx, ny);
+
+  // Pickups sit between the end of the neck and the bridge.
+  const bridgeBoxX = geo.bodyBoxX(geo.bridgeX);
+  const neckBoxX = geo.bodyBoxX(geo.neckJoinX);
+  const lerp = (t: number): number => neckBoxX + (bridgeBoxX - neckBoxX) * t;
+  const pickups = isBass
+    ? [
+        { nx: lerp(0.4), slant: 0, w: 30 },
+        { nx: lerp(0.72), slant: 0, w: 30 },
+      ]
+    : [
+        { nx: lerp(0.16), slant: 0, w: 18 },
+        { nx: lerp(0.46), slant: 0, w: 18 },
+        { nx: lerp(0.78), slant: 8, w: 18 },
+      ];
+
+  /** Half-height of the string field at a world x. */
+  const fieldHalf = (x: number): number =>
+    Math.abs(geo.stringY(0, x) - geo.stringY(strings - 1, x)) / 2;
+
+  // A pickguard hugging the treble side, from the neck pocket to past the
+  // bridge pickup.
+  const guardNx0 = neckBoxX - 40;
+  const guardNx1 = Math.min(bridgeBoxX + 10, 880);
+  const gx = (t: number): number => guardNx0 + (guardNx1 - guardNx0) * t;
+  const guard: [number, number][] = [
+    [gx(0.0), 288],
+    [gx(0.04), 212],
+    [gx(0.16), 158],
+    [gx(0.34), 126],
+    [gx(0.54), 120],
+    [gx(0.74), 140],
+    [gx(0.9), 182],
+    [gx(1.0), 244],
+    [gx(1.02), 320],
+    [gx(0.96), 396],
+    [gx(0.84), 452],
+    [gx(0.66), 486],
+    [gx(0.46), 492],
+    [gx(0.26), 474],
+    [gx(0.1), 426],
+    [gx(0.0), 360],
+  ];
+
   return (
     <g>
-      {/* Pickguard */}
       <path
-        d={`M ${geo.bodyX0 + 120} ${CENTRE_LINE - half - 14}
-            L ${geo.bodyX0 + 330} ${CENTRE_LINE - half - 30}
-            L ${geo.bodyX0 + 360} ${CENTRE_LINE + half + 26}
-            L ${geo.bodyX0 + 140} ${CENTRE_LINE + half + 18} Z`}
+        d={smoothPath(guard.map(([nx, ny]) => P(nx, ny)), true)}
         fill={d.pickguardColor}
         opacity={0.5}
+        stroke="rgba(0,0,0,0.32)"
+        strokeWidth={1.6}
       />
-      {[pickupX1, pickupX2].map((x, i) => (
-        <g key={x}>
-          <rect
-            x={x}
-            y={CENTRE_LINE - half - 6}
-            width={geo.instrument.family === 'bass' ? 22 : 16}
-            height={half * 2 + 12}
-            rx={5}
-            fill="#20242b"
-            stroke="#454c56"
-            strokeWidth={1.5}
-          />
-          {Array.from({ length: geo.stringCount }, (_, s) => (
-            <circle
-              key={s}
-              cx={x + (geo.instrument.family === 'bass' ? 11 : 8)}
-              cy={geo.stringY(s, x)}
-              r={2.6}
-              fill={i === 0 ? '#cfd6e0' : '#aeb6c1'}
+
+      {pickups.map((p, i) => {
+        const [x] = P(p.nx, 0);
+        const fh = fieldHalf(x) + (isBass ? 15 : 12);
+        return (
+          <g key={i} transform={`rotate(${p.slant} ${x} ${CENTRE_LINE})`}>
+            <rect
+              x={x - p.w / 2}
+              y={CENTRE_LINE - fh}
+              width={p.w}
+              height={fh * 2}
+              rx={p.w / 2.8}
+              fill="#1d2127"
+              stroke="#555d68"
+              strokeWidth={1.4}
             />
-          ))}
-        </g>
-      ))}
-      {/* Bridge and saddles */}
-      <rect
-        x={bridgeX - 14}
-        y={CENTRE_LINE - half - 4}
-        width={30}
-        height={half * 2 + 8}
-        rx={4}
-        fill="#2a2f37"
-        stroke="#596170"
-        strokeWidth={1.5}
-      />
-      {Array.from({ length: geo.stringCount }, (_, s) => (
-        <circle key={s} cx={bridgeX + 1} cy={geo.stringY(s, bridgeX)} r={2.4} fill="#d4dae3" />
-      ))}
-      {/* Controls */}
-      {[0, 1, 2].map((i) => (
-        <circle
-          key={i}
-          cx={geo.bodyX0 + 400 + i * 42}
-          cy={CENTRE_LINE + half * 0.75 + i * 10}
-          r={13}
-          fill="#e6e9ee"
-          stroke="#8e96a3"
-          strokeWidth={2}
-        />
-      ))}
+            {Array.from({ length: strings }, (_, sIdx) => (
+              <circle
+                key={sIdx}
+                cx={x}
+                cy={geo.stringY(sIdx, x)}
+                r={isBass ? 3 : 2.4}
+                fill="#cfd6e0"
+              />
+            ))}
+          </g>
+        );
+      })}
+
+      {/* Bridge, aligned to where the strings actually end. */}
+      {(() => {
+        const bx = P(bridgeBoxX, 0)[0];
+        const fh = fieldHalf(bx);
+        return (
+          <g>
+            <rect
+              x={bx - 18}
+              y={CENTRE_LINE - fh - 14}
+              width={isBass ? 46 : 40}
+              height={fh * 2 + 28}
+              rx={4}
+              fill="#2a2f37"
+              stroke="#636c79"
+              strokeWidth={1.6}
+            />
+            {Array.from({ length: strings }, (_, sIdx) => (
+              <g key={sIdx}>
+                <rect
+                  x={bx - 12}
+                  y={geo.stringY(sIdx, bx) - 3.5}
+                  width={22}
+                  height={7}
+                  rx={2}
+                  fill="#8d96a3"
+                />
+                <circle cx={bx + 8} cy={geo.stringY(sIdx, bx)} r={2.2} fill="#e3e8ef" />
+              </g>
+            ))}
+          </g>
+        );
+      })()}
+
+      {/* Controls, inside the body on the bass side of the pickguard. */}
+      {[0, 1, 2].map((i) => {
+        const [cx, cy] = P(620 + i * 54, 492 + i * 30);
+        return (
+          <circle key={i} cx={cx} cy={cy} r={12} fill="#e9ecf1" stroke="#8e96a3" strokeWidth={2} />
+        );
+      })}
+
+      {/* Output jack and strap buttons. */}
+      {(() => {
+        const [jx, jy] = P(812, 500);
+        const [s1x, s1y] = P(30, 576);
+        const [s2x, s2y] = P(944, 350);
+        return (
+          <g>
+            <circle cx={jx} cy={jy} r={10} fill="#30363f" stroke="#8e96a3" strokeWidth={2.4} />
+            <circle cx={s1x} cy={s1y} r={6} fill="#aab2bd" />
+            <circle cx={s2x} cy={s2y} r={6} fill="#aab2bd" />
+          </g>
+        );
+      })()}
     </g>
   );
 }

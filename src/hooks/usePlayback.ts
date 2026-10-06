@@ -13,8 +13,13 @@ import { useMusicContext } from '../state/selectors';
 import type { Voicing } from '../core/theory/voicing';
 
 export interface PlaybackApi {
-  /** Play the note at a fretboard position and remember it as selected. */
+  /**
+   * Play the note at a fretboard position and select it. Picking the
+   * position that is already selected deselects it.
+   */
   pick: (stringIndex: number, fret: number) => void;
+  /** Clear the selection without playing anything. */
+  clearSelection: () => void;
   /** Play one MIDI note. */
   playNote: (midi: number, stringIndex?: number) => void;
   /** Play a chord shape, honouring the current strum mode and speed. */
@@ -58,7 +63,12 @@ export function usePlayback(): PlaybackApi {
   const pick = useCallback(
     (stringIndex: number, fret: number) => {
       const midi = ctx.openMidis[stringIndex] + fret;
-      select({ stringIndex, fret });
+      // Clicking the position that is already selected clears it, so a
+      // selection can be undone without having to pick a different note.
+      // The note still sounds either way: the click is asking to hear it.
+      const current = useStore.getState().selected;
+      const sameAgain = current?.stringIndex === stringIndex && current?.fret === fret;
+      select(sameAgain ? null : { stringIndex, fret });
       playNote(midi, stringIndex);
     },
     [ctx.openMidis, playNote, select],
@@ -81,9 +91,11 @@ export function usePlayback(): PlaybackApi {
   );
 
   const stop = useCallback(() => audioEngine.stopAll(), []);
+  const clearSelection = useCallback(() => select(null), [select]);
 
   return {
     pick,
+    clearSelection,
     playNote,
     strum,
     stop,

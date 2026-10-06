@@ -5,7 +5,7 @@ tuning you like, and the whole neck re-derives itself: note names, scale
 highlighting, chord shapes, playback and the tuner's targets. Everything runs
 in the browser — no server, no accounts, no audio files, no paid domain.
 
-- **Four instruments**: 6- and 7-string guitar, 4- and 5-string bass.
+- **Four instruments**: pick Guitar or Bass, then 6- or 7-string / 4- or 5-string.
 - **32 tuning presets plus a custom tuning editor**, per instrument.
 - **27 scales and modes**, **21 chord types**.
 - **Chord shapes that are searched for, not stored**, so alternate tunings are
@@ -161,7 +161,8 @@ src/
     selectors.ts              settings -> derived musical context
 
   components/
-    fretboard/geometry.ts     instrument drawing geometry (pure)
+    fretboard/geometry.ts     drawing geometry: traced body and headstock
+                              outlines, fret spacing, string positions (pure)
     fretboard/InstrumentSVG.tsx    headstock + neck + body + notes
     fretboard/InstrumentStage.tsx  scroll, zoom, and the tuner camera
     panels/                   control, info, chord and tuner panels
@@ -551,6 +552,8 @@ position — not a default.
   the controls a beginner would not recognise.
 - Honours `prefers-reduced-motion`, including for the tuner camera.
 - Light and dark themes, both with text contrast meeting WCAG AA.
+- The neck is drawn the way a chord chart reads: **the lowest-pitched string at
+  the bottom**, with the body and headstock oriented to match.
 
 ## 14. Settings that are remembered
 

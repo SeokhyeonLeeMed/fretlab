@@ -8,12 +8,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Card, Field, Help, Notice, Select, Switch, type Option } from '../ui/controls';
-import { INSTRUMENTS, customTuningSeed, useStore } from '../../state/store';
+import { customTuningSeed, useStore } from '../../state/store';
 import { ROOT_OPTIONS, useMusicContext } from '../../state/selectors';
 import { SCALES, SCALE_CATEGORIES, getScale } from '../../core/theory/scales';
 import { CHORDS, CHORD_CATEGORIES, getChord } from '../../core/theory/chords';
 import { validateTuning } from '../../core/theory/fretboard';
-import { getInstrument } from '../../core/instruments/definitions';
+import { FAMILIES, getInstrument, instrumentsOfFamily } from '../../core/instruments/definitions';
 import { midiToNote, noteNameToMidi } from '../../core/theory/pitch';
 
 export function ControlPanel() {
@@ -30,24 +30,51 @@ export function ControlPanel() {
 function InstrumentCard() {
   const instrumentId = useStore((s) => s.instrumentId);
   const setInstrument = useStore((s) => s.setInstrument);
+  const setFamily = useStore((s) => s.setFamily);
   const ctx = useMusicContext();
+  const family = ctx.instrument.family;
+  const siblings = instrumentsOfFamily(family);
 
   return (
     <Card title="Instrument" id="instrument">
-      <div className="segmented" role="group" aria-label="Instrument" style={{ flexWrap: 'wrap' }}>
-        {INSTRUMENTS.map((i) => (
-          <button
-            key={i.id}
-            type="button"
-            aria-pressed={i.id === instrumentId}
-            onClick={() => setInstrument(i.id)}
-            title={`${i.name}, ${i.fretCount} frets`}
-          >
-            {i.shortName}
-          </button>
-        ))}
+      <div className="field">
+        <span className="field-label" id="family-label">
+          Type
+        </span>
+        <div className="segmented" role="group" aria-labelledby="family-label">
+          {FAMILIES.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              aria-pressed={f.id === family}
+              onClick={() => setFamily(f.id)}
+            >
+              {f.name}
+            </button>
+          ))}
+        </div>
       </div>
-      <p className="field-hint" style={{ marginTop: 10 }}>
+
+      <div className="field">
+        <span className="field-label" id="strings-label">
+          Strings
+        </span>
+        <div className="segmented" role="group" aria-labelledby="strings-label">
+          {siblings.map((i) => (
+            <button
+              key={i.id}
+              type="button"
+              aria-pressed={i.id === instrumentId}
+              onClick={() => setInstrument(i.id)}
+              title={`${i.name}, ${i.fretCount} frets`}
+            >
+              {i.stringCount}-string
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="field-hint">
         {ctx.instrument.name} &middot; {ctx.instrument.stringCount} strings &middot;{' '}
         {ctx.instrument.fretCount} frets &middot; {ctx.instrument.scaleLengthIn}" scale
       </p>

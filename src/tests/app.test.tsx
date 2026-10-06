@@ -43,12 +43,19 @@ const selectsNamed = (name: RegExp): HTMLElement[] =>
   screen.getAllByRole('combobox', { name });
 const selectNamed = (name: RegExp): HTMLElement => selectsNamed(name)[0];
 
+/** Choose an instrument through the two-step Type / Strings selector. */
+const chooseInstrument = (family: 'Guitar' | 'Bass', strings: number): void => {
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${family}$`) }));
+  fireEvent.click(screen.getByRole('button', { name: `${strings}-string` }));
+};
+
 describe('the application renders and is navigable', () => {
   it('renders the instrument, the controls and the information panels', () => {
     render(<App />);
     expect(screen.getByRole('group', { name: /6-string guitar fretboard/i })).toBeTruthy();
     expect(screen.getByRole('grid', { name: /Fretboard/i })).toBeTruthy();
-    expect(screen.getByRole('group', { name: 'Instrument' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Type' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Strings' })).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Interaction mode' })).toBeTruthy();
     expect(screen.getByText('Current selection')).toBeTruthy();
   });
@@ -73,13 +80,13 @@ describe('the application renders and is navigable', () => {
 
 describe('switching instruments reconfigures everything', () => {
   it.each([
-    ['Guitar 6', '6-string guitar', 6, 23, 'E2, string 6, open'],
-    ['Guitar 7', '7-string guitar', 7, 25, 'B1, string 7, open'],
-    ['Bass 4', '4-string bass', 4, 22, 'E1, string 4, open'],
-    ['Bass 5', '5-string bass', 5, 23, 'B0, string 5, open'],
-  ])('%s shows %s', (button, label, strings, positions, lowestOpen) => {
+    ['Guitar', 6, '6-string guitar', 6, 23, 'E2, string 6, open'],
+    ['Guitar', 7, '7-string guitar', 7, 25, 'B1, string 7, open'],
+    ['Bass', 4, '4-string bass', 4, 22, 'E1, string 4, open'],
+    ['Bass', 5, '5-string bass', 5, 23, 'B0, string 5, open'],
+  ] as const)('%s %s-string shows %s', (family, count, label, strings, positions, lowestOpen) => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: button }));
+    chooseInstrument(family, count);
     expect(screen.getByRole('group', { name: new RegExp(`${label} fretboard`, 'i') })).toBeTruthy();
     const names = cellNames();
     expect(names).toHaveLength(strings * positions);
@@ -88,11 +95,45 @@ describe('switching instruments reconfigures everything', () => {
 
   it('offers only that instrument’s tuning presets', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Bass 5' }));
+    chooseInstrument('Bass', 5);
     const select = selectNamed(/Preset/i) as HTMLSelectElement;
     const labels = [...select.options].map((o) => o.text);
     expect(labels.some((l) => l.includes('B E A D G'))).toBe(true);
     expect(labels.some((l) => l.includes('E A D G B E'))).toBe(false);
+  });
+});
+
+describe('the instrument selector', () => {
+  it('offers only Guitar and Bass at the top level', () => {
+    render(<App />);
+    const type = screen.getByRole('group', { name: 'Type' });
+    expect(within(type).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'Guitar',
+      'Bass',
+    ]);
+  });
+
+  it('offers the string counts of the chosen type', () => {
+    render(<App />);
+    const counts = (): string[] =>
+      within(screen.getByRole('group', { name: 'Strings' }))
+        .getAllByRole('button')
+        .map((b) => b.textContent ?? '');
+    expect(counts()).toEqual(['6-string', '7-string']);
+
+    fireEvent.click(screen.getByRole('button', { name: /^Bass$/ }));
+    expect(counts()).toEqual(['4-string', '5-string']);
+  });
+
+  it('remembers the instrument last used in each type', () => {
+    render(<App />);
+    chooseInstrument('Guitar', 7);
+    chooseInstrument('Bass', 5);
+    // Going back to Guitar returns to the 7-string, not to the default.
+    fireEvent.click(screen.getByRole('button', { name: /^Guitar$/ }));
+    expect(useStore.getState().instrumentId).toBe('guitar7');
+    fireEvent.click(screen.getByRole('button', { name: /^Bass$/ }));
+    expect(useStore.getState().instrumentId).toBe('bass5');
   });
 });
 
@@ -375,6 +416,49 @@ describe('strumming and note playback', () => {
     expect(tile?.textContent).toContain('fret 3');
   });
 
+  it('clicking the selected position again deselects it', async () => {
+    installFakeAudio();
+    render(<App />);
+    const tile = (): string => screen.getByText('Selected note').closest('.info-tile')?.textContent ?? '';
+
+    fireEvent.pointerDown(cell('G2, string 6, fret 3'));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(tile()).toContain('G2');
+    expect(useStore.getState().selected).toEqual({ stringIndex: 0, fret: 3 });
+
+    // The same position again clears the selection...
+    fireEvent.pointerDown(cell('G2, string 6, fret 3'));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(useStore.getState().selected).toBeNull();
+    expect(tile()).not.toContain('G2');
+
+    // ...while a different position simply selects that one.
+    fireEvent.pointerDown(cell('A2, string 6, fret 5'));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(useStore.getState().selected).toEqual({ stringIndex: 0, fret: 5 });
+  });
+
+  it('deselecting still plays the note, because the click asked to hear it', async () => {
+    const started = installFakeAudio();
+    render(<App />);
+    fireEvent.pointerDown(cell('G2, string 6, fret 3'));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    started.length = 0;
+    fireEvent.pointerDown(cell('G2, string 6, fret 3'));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(started).toHaveLength(1);
+  });
+
   it('the reported pitch follows the tuning', async () => {
     installFakeAudio();
     render(<App />);
@@ -557,7 +641,7 @@ describe('tuner mode', () => {
 describe('settings persistence', () => {
   it('remembers the instrument, tuning, scale, theme and volume', () => {
     const { unmount } = render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Bass 5' }));
+    chooseInstrument('Bass', 5);
     fireEvent.change(selectNamed(/Preset/i), { target: { value: 'tenor' } });
     fireEvent.click(screen.getByRole('button', { name: 'Light' }));
     act(() => useStore.getState().setVolume(0.33));

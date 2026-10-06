@@ -33,6 +33,8 @@ export interface AppState {
   tuningId: string;
   /** Custom open-string notes per instrument, so each keeps its own. */
   customTunings: Record<string, string[]>;
+  /** Last instrument chosen in each family, so switching family restores it. */
+  lastByFamily: Record<string, string>;
 
   mode: Mode;
 
@@ -68,6 +70,8 @@ export interface AppState {
 
   // --- actions ---
   setInstrument: (id: string) => void;
+  /** Switch family, returning to whichever instrument was last used there. */
+  setFamily: (family: string) => void;
   setTuning: (id: string) => void;
   setCustomTuning: (instrumentId: string, notes: string[]) => void;
   setMode: (mode: Mode) => void;
@@ -103,6 +107,7 @@ const DEFAULTS = {
   instrumentId: 'guitar6',
   tuningId: 'standard',
   customTunings: {} as Record<string, string[]>,
+  lastByFamily: { guitar: 'guitar6', bass: 'bass4' } as Record<string, string>,
   mode: 'scale' as Mode,
   scaleRoot: 'E',
   scaleId: 'minor-pentatonic',
@@ -144,7 +149,22 @@ export const useStore = create<AppState>()(
             : inst.tunings.some((t) => t.id === prev.tuningId)
               ? prev.tuningId
               : inst.defaultTuningId;
-        set({ instrumentId: id, tuningId: keep, selected: null, voicingIndex: 0, tunerStringIndex: null });
+        set({
+          instrumentId: id,
+          tuningId: keep,
+          selected: null,
+          voicingIndex: 0,
+          tunerStringIndex: null,
+          lastByFamily: { ...prev.lastByFamily, [inst.family]: id },
+        });
+      },
+
+      setFamily: (family) => {
+        const choices = INSTRUMENTS.filter((i) => i.family === family);
+        if (choices.length === 0) return;
+        const remembered = get().lastByFamily[family];
+        const next = choices.find((i) => i.id === remembered) ?? choices[0];
+        get().setInstrument(next.id);
       },
 
       setTuning: (id) => set({ tuningId: id, selected: null, voicingIndex: 0 }),
@@ -193,6 +213,7 @@ export const useStore = create<AppState>()(
         instrumentId: s.instrumentId,
         tuningId: s.tuningId,
         customTunings: s.customTunings,
+        lastByFamily: s.lastByFamily,
         mode: s.mode === 'tuner' ? 'normal' : s.mode,
         scaleRoot: s.scaleRoot,
         scaleId: s.scaleId,

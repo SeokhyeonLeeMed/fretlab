@@ -38,10 +38,36 @@ tunings correct rather than approximately correct.
 
 # 2. What was built
 
+## 2.0 Revision 2
+
+After the first build was reviewed, six changes were made:
+
+1. **The body and headstock outlines were redrawn.** They are now traced
+   outlines of an offset double-cutaway guitar and an offset bass — real horns,
+   cutaway scoops, a pinched waist and bouts — rather than the smooth profiles
+   of the first version, which read as featureless blobs.
+2. **The instrument was turned the right way up**: the lowest-pitched string is
+   now drawn at the bottom, as a chord chart or tab staff reads, and the body
+   and headstock were re-authored to match.
+3. **The fret wires became visible.** They were being painted with an SVG
+   gradient in `objectBoundingBox` units; a perfectly vertical line has zero
+   bounding-box width, so the gradient degenerated and nothing was drawn. They
+   are now solid metal with a bright crown.
+4. **Clicking the selected position now deselects it.**
+5. **The missing middle string was fixed** — the same gradient fault. A
+   perfectly horizontal line has zero bounding-box height, and only the exact
+   middle string of an odd-numbered set is perfectly horizontal, which is why it
+   was the 4th string of 7 and the 3rd of 5 that vanished. One fix covered both
+   this and the frets.
+6. **The instrument selector became two steps**: Guitar or Bass, then the
+   string count, with the instrument last used in each family remembered.
+
 ## 2.1 The instrument view
 
 The instrument is drawn as a single SVG in one coordinate system: headstock,
-nut, fretboard, body, hardware and strings. The strings are drawn as one
+nut, fretboard, body, hardware and strings. The body and headstock are traced
+outlines held as data, so the silhouette can be adjusted without touching any
+rendering code. The lowest-pitched string is drawn at the bottom. The strings are drawn as one
 continuous run from each tuning peg, over the nut, to the bridge, which is what
 makes the fretboard and the instrument graphic read as one object rather than
 two unrelated pictures. Fret spacing uses the real equal-tempered rule
@@ -598,9 +624,14 @@ A few things are worth stating plainly rather than leaving to be discovered.
 - **Voicings are limited to a four-fret span and four fingers.** That is the
   right default for a learning tool, but it means some wide jazz voicings and
   thumb-over shapes are not offered.
-- **The body graphic is stylised.** It is drawn slightly shallower than a real
-  instrument body so that the fretboard — the part people use — gets enough
-  vertical space. It reads as a guitar or a bass; it is not a scale drawing.
+- **The body is drawn to a compressed scale.** A real electric guitar's body is
+  about six times the width of its neck. Drawn to that ratio, with the neck
+  still large enough to tap accurately, the instrument would need roughly twice
+  the vertical space the page can give it. The body is therefore about half the
+  size relative to the neck that it should be, which makes the neck look chunky
+  next to it. The silhouette is correct; the proportion is a deliberate trade in
+  favour of a usable fretboard, and it is the one place where the drawing is
+  knowingly not to scale.
 - **The tuner is monophonic**, like every tuner of this kind. It expects one
   string at a time, and says so.
 - **Microphone capture could not be tested against real hardware here.** The

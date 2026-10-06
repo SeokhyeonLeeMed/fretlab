@@ -29,10 +29,15 @@ export interface InstrumentDef {
   /** Scale length in inches; used for proportionate neck drawing. */
   scaleLengthIn: number;
   display: {
-    /** Body silhouette variant used by the instrument graphic. */
-    bodyStyle: 'guitar-dc' | 'bass-jazz';
-    /** Headstock peg layout. */
-    headstock: 'inline' | 'split';
+    /**
+     * Body silhouette. 'offset-double-cutaway' is the classic bolt-on
+     * electric guitar outline; 'offset-bass' is its long-horned bass
+     * counterpart. Both are drawn from original profile data in
+     * components/fretboard/geometry.ts.
+     */
+    bodyStyle: 'offset-double-cutaway' | 'offset-bass';
+    /** Headstock outline; both are six/four-in-a-row designs. */
+    headstock: 'inline-guitar' | 'inline-bass';
     bodyColor: string;
     bodyEdgeColor: string;
     fretboardColor: string;
@@ -99,8 +104,8 @@ export const INSTRUMENTS: InstrumentDef[] = [
     stringGauges: [1.0, 0.86, 0.72, 0.58, 0.46, 0.36],
     scaleLengthIn: 25.5,
     display: {
-      bodyStyle: 'guitar-dc',
-      headstock: 'inline',
+      bodyStyle: 'offset-double-cutaway',
+      headstock: 'inline-guitar',
       bodyColor: '#b5472b',
       bodyEdgeColor: '#6d2214',
       fretboardColor: '#43281a',
@@ -119,8 +124,8 @@ export const INSTRUMENTS: InstrumentDef[] = [
     stringGauges: [1.12, 1.0, 0.86, 0.72, 0.58, 0.46, 0.36],
     scaleLengthIn: 26.5,
     display: {
-      bodyStyle: 'guitar-dc',
-      headstock: 'inline',
+      bodyStyle: 'offset-double-cutaway',
+      headstock: 'inline-guitar',
       bodyColor: '#2f3b52',
       bodyEdgeColor: '#161e2c',
       fretboardColor: '#2c2320',
@@ -139,8 +144,8 @@ export const INSTRUMENTS: InstrumentDef[] = [
     stringGauges: [1.45, 1.22, 1.02, 0.84],
     scaleLengthIn: 34,
     display: {
-      bodyStyle: 'bass-jazz',
-      headstock: 'inline',
+      bodyStyle: 'offset-bass',
+      headstock: 'inline-bass',
       bodyColor: '#2d6a5a',
       bodyEdgeColor: '#13382f',
       fretboardColor: '#3a2a1e',
@@ -159,8 +164,8 @@ export const INSTRUMENTS: InstrumentDef[] = [
     stringGauges: [1.62, 1.45, 1.22, 1.02, 0.84],
     scaleLengthIn: 35,
     display: {
-      bodyStyle: 'bass-jazz',
-      headstock: 'split',
+      bodyStyle: 'offset-bass',
+      headstock: 'inline-bass',
       bodyColor: '#473169',
       bodyEdgeColor: '#241440',
       fretboardColor: '#241a14',
@@ -184,6 +189,18 @@ export function getTuning(instrument: InstrumentDef, tuningId: string): Tuning {
     instrument.tunings.find((x) => x.id === tuningId) ??
     instrument.tunings.find((x) => x.id === instrument.defaultTuningId) ??
     instrument.tunings[0]
+  );
+}
+
+export const FAMILIES: { id: InstrumentFamily; name: string }[] = [
+  { id: 'guitar', name: 'Guitar' },
+  { id: 'bass', name: 'Bass' },
+];
+
+/** The instruments of one family, fewest strings first. */
+export function instrumentsOfFamily(family: InstrumentFamily): InstrumentDef[] {
+  return INSTRUMENTS.filter((i) => i.family === family).sort(
+    (a, b) => a.stringCount - b.stringCount,
   );
 }
 

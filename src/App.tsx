@@ -108,7 +108,7 @@ export function App() {
                       // included, fits the width of the stage.
                       const el = document.querySelector('.stage-scroll');
                       const w = (el as HTMLElement | null)?.clientWidth ?? 900;
-                      const base = Math.max(240, Math.min(330, w * 0.26));
+                      const base = Math.max(320, Math.min(450, w * 0.36));
                       setZoom((w / geo.width) * (geo.height / base));
                       requestAnimationFrame(() => {
                         if (el) (el as HTMLElement).scrollLeft = 0;
