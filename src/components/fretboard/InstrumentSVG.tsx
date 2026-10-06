@@ -214,7 +214,7 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
                 cy={peg.y}
                 r={peg.r}
                 fill="none"
-                stroke={state === 'in-tune' ? 'var(--ok)' : 'var(--accent)'}
+                stroke={state === 'in-tune' ? 'var(--ok)' : 'var(--out-of-tune)'}
                 strokeWidth={4}
               />
             );
@@ -227,7 +227,7 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
         {strings.map((i) => {
           const peg = geo.pegs[i] ?? { x: geo.nutX - 40, y: geo.stringY(i, geo.nutX) };
           const mutedInChord = mode === 'chord' && props.voicing?.frets[i] === null;
-          const pts = `${peg.x},${peg.y} ${geo.nutX},${geo.stringY(i, geo.nutX)} ${geo.bridgeX},${geo.stringY(i, geo.bridgeX)}`;
+          const pts = `${peg.x},${peg.y} ${geo.nutX},${geo.stringY(i, geo.nutX)} ${geo.stringEndX},${geo.stringY(i, geo.stringEndX)}`;
           return (
             <g key={i} opacity={mutedInChord ? 0.3 : 1}>
               <polyline points={pts} fill="none" stroke="#6d737c" strokeWidth={geo.stringWidth(i)} strokeLinecap="round" />
@@ -258,7 +258,7 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
             <text
               key={f}
               x={x}
-              y={geo.centreY + geo.neckHalf(x) + 34}
+              y={geo.boardMid(x) + geo.neckHalf(x) + 34}
               textAnchor="middle"
               fontWeight={f % 12 === 0 ? 700 : 500}
             >

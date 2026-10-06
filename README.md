@@ -9,7 +9,8 @@ in the browser — no server, no accounts, no audio files, no paid domain.
 - **20 tuning presets plus a custom tuning editor**, per instrument.
 - **27 scales and modes**, **21 chord types**.
 - **Chord shapes that are searched for, not stored**, so alternate tunings are
-  correct by construction rather than by a lookup table.
+  correct by construction rather than by a lookup table — including a movable
+  barre shape whenever the tuning admits one.
 - **Plucked-string synthesis** with the Web Audio API, including down and up
   strumming at adjustable speed.
 - **A chromatic tuner** that listens through the microphone, with a camera
@@ -367,7 +368,7 @@ position — not a default.
 | Instrument | Strings | Frets | Default tuning | Tuning presets |
 | --- | --- | --- | --- | --- |
 | 6-string guitar | 6 | 21 | E2 A2 D3 G3 B3 E4 | 13 + custom |
-| 4-string bass | 4 | 20 | E1 A1 D2 G2 | 7 + custom |
+| 4-string bass | 4 | 21 | E1 A1 D2 G2 | 7 + custom |
 
 ### Tuning presets
 

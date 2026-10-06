@@ -56,6 +56,8 @@
   --accent-ink: #20160a;
   --focus: #6fb4ff;
   --danger: #ff6b6b;
+  /* Out of tune: readable against pale maple, without shouting. */
+  --out-of-tune: #b2443c;
   --ok: #43c9a0;
   --stage-bg: radial-gradient(ellipse at 30% 20%, #1c242f 0%, #0d1117 70%);
 }
@@ -76,6 +78,7 @@
   --accent-ink: #ffffff;
   --focus: #0b63ce;
   --danger: #c22b2b;
+  --out-of-tune: #a93a33;
   --ok: #117a5c;
   --role-root: #c62a2d;
   --role-scale: #b4761a;

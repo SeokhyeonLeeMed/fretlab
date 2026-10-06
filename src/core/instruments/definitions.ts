@@ -95,7 +95,7 @@ export const INSTRUMENTS: InstrumentDef[] = [
     shortName: 'Bass 4',
     family: 'bass',
     stringCount: 4,
-    fretCount: 20,
+    fretCount: 21,
     defaultTuningId: 'standard',
     tunings: BASS4_TUNINGS,
     stringGauges: [1.45, 1.22, 1.02, 0.84],

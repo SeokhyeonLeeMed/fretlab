@@ -64,6 +64,10 @@ export interface Geometry {
   stringY: (stringIndex: number, x: number) => number;
   /** Half-height of the string field at a given x. */
   neckHalf: (x: number) => number;
+  /** Centre of the fretboard at a given x. The neck is not perfectly level. */
+  boardMid: (x: number) => number;
+  /** Where the strings are anchored, past the saddles. */
+  stringEndX: number;
   /** Drawn string thickness. */
   stringWidth: (stringIndex: number) => number;
   /** Radius of a note marker. */
@@ -84,25 +88,67 @@ export function buildGeometry(instrument: InstrumentDef): Geometry {
   const bridgeX = nutX + SCALE_PX;
   const fretX = (fret: number): number => nutX + SCALE_PX * fretDistanceRatio(fret);
   const boardEndX = fretX(fretCount);
+  /** Where the strings are anchored, past the saddles. */
+  const stringEndX = nutX + art.bridgeEndX * ART_UNIT;
 
-  // The strings sit inside the drawn neck's edges, as they do on the
-  // instrument, and the field widens along the neck just as the neck does.
-  const EDGE = 0.84;
-  const TAPER = 1.22;
-  const neckHalf = (x: number): number => {
-    const t = Math.max(0, Math.min(1.3, (x - nutX) / Math.max(1, boardEndX - nutX)));
-    return art.neckHalfNut * ART_UNIT * EDGE * (1 + (TAPER - 1) * t);
+  /**
+   * The drawn fretboard's edges, sampled from the artwork and interpolated
+   * here. The drawing is not perfectly level and its centre line is not at
+   * y = 0, so the strings are laid against these real edges rather than
+   * against an assumed horizontal neck. Past the end of the board the trend
+   * of the last two samples is continued, which carries the strings' fan out
+   * to the bridge the way it actually runs.
+   */
+  const edgeAt = (samples: [number, number][], fx: number): number => {
+    if (fx <= samples[0][0]) {
+      const [[x1, y1], [x2, y2]] = [samples[0], samples[1]];
+      return y1 + ((y2 - y1) * (fx - x1)) / (x2 - x1 || 1);
+    }
+    const last = samples.length - 1;
+    if (fx >= samples[last][0]) {
+      const [[x1, y1], [x2, y2]] = [samples[last - 1], samples[last]];
+      return y2 + ((y2 - y1) * (fx - x2)) / (x2 - x1 || 1);
+    }
+    for (let i = 1; i <= last; i++) {
+      if (fx <= samples[i][0]) {
+        const [x1, y1] = samples[i - 1];
+        const [x2, y2] = samples[i];
+        return y1 + ((y2 - y1) * (fx - x1)) / (x2 - x1 || 1);
+      }
+    }
+    return samples[last][1];
   };
-  const nutHalf = neckHalf(nutX);
-  // A margin of about half a string space is left outside the two outer
-  // strings, which is what stops them running off the edge of the fretboard.
-  const spacing = (2 * nutHalf) / (stringCount - 1 + 0.9);
+
+  /** Top and bottom of the fretboard, in world units, at a given world x. */
+  const boardEdges = (x: number): [number, number] => {
+    const fx = (x - nutX) / ART_UNIT;
+    return [
+      centreY + edgeAt(art.edgeTop, fx) * ART_UNIT,
+      centreY + edgeAt(art.edgeBottom, fx) * ART_UNIT,
+    ];
+  };
+
+  /** A margin inside the fretboard's edges, as on the real instrument. */
+  const INSET = 0.085;
+  const neckHalf = (x: number): number => {
+    const [t, b] = boardEdges(x);
+    return ((b - t) / 2) * (1 - 2 * INSET);
+  };
+  /** Centre of the fretboard at a given x — not a fixed line. */
+  const boardMid = (x: number): number => {
+    const [t, b] = boardEdges(x);
+    return (t + b) / 2;
+  };
 
   const stringY = (stringIndex: number, x: number): number => {
-    const sp = (2 * neckHalf(x)) / (stringCount - 1 + 0.9);
-    const bottom = centreY + ((stringCount - 1) * sp) / 2;
-    return bottom - stringIndex * sp;
+    const half = neckHalf(x);
+    const mid = boardMid(x);
+    const sp = (2 * half) / Math.max(1, stringCount - 1);
+    return mid + half - stringIndex * sp;
   };
+
+  const nutHalf = neckHalf(nutX);
+  const spacing = (2 * nutHalf) / Math.max(1, stringCount - 1);
 
   const noteX = (fret: number): number =>
     fret === 0 ? nutX - 32 : (fretX(fret - 1) + fretX(fret)) / 2;
@@ -153,6 +199,8 @@ export function buildGeometry(instrument: InstrumentDef): Geometry {
     noteX,
     stringY,
     neckHalf,
+    boardMid,
+    stringEndX,
     stringWidth,
     noteRadius: Math.min(10, spacing * 0.44),
   };

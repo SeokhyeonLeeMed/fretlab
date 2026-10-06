@@ -68,9 +68,22 @@ export function ChordPanel() {
                 <span className="frets">
                   {v.frets.map((f) => (f === null ? '✕' : f)).join(' ')}
                 </span>
+                {v.barre !== null && (
+                  <span className="chip" style={{ padding: '1px 6px', fontSize: 10 }}>
+                    barre {v.barre}
+                  </span>
+                )}
               </button>
             ))}
           </div>
+
+          {!voicings.some((v) => v.barre !== null) && (
+            <p className="field-hint" style={{ marginTop: 10 }}>
+              No barre shape exists for {ctx.chordName} in this tuning: a barre needs two chord
+              tones at the same fret on different strings, and this chord's intervals never line up
+              that way here.
+            </p>
+          )}
 
           {active && <ActiveVoicingFacts voicing={active} />}
         </>

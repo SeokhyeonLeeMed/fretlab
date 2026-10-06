@@ -342,6 +342,37 @@ for (const [family, src] of Object.entries(SOURCES)) {
     .sort((a, b2) => b2[0] - a[0])
     .slice(0, src.strings);
 
+  // ---- where the strings belong -------------------------------------------
+  // The drawn fretboard is not perfectly level, so the strings are placed
+  // against its real edges rather than against a horizontal centre line.
+  // Sample the fretboard outline's top and bottom edge along its length.
+  const boardShape = neckShapes
+    .map((sh) => ({ sh, b: bboxOf(sh.pts) }))
+    .sort((a, b2) => b2.b.maxX - b2.b.minX - (a.b.maxX - a.b.minX))[0].sh;
+  const boardPts = boardShape.pts.map((pt) => toFrame(pt, neckOff.dx, neckOff.dy));
+  const boardBox = bboxOf(boardPts);
+  const EDGES = 24;
+  const edgeTop = [];
+  const edgeBottom = [];
+  for (let i = 0; i <= EDGES; i++) {
+    const x = boardBox.minX + ((boardBox.maxX - boardBox.minX) * i) / EDGES;
+    const w = (boardBox.maxX - boardBox.minX) / EDGES;
+    const near = boardPts.filter((pt) => Math.abs(pt[0] - x) <= w * 0.8);
+    if (near.length < 2) continue;
+    edgeTop.push([round(x, 1), round(Math.min(...near.map((pt) => pt[1])), 2)]);
+    edgeBottom.push([round(x, 1), round(Math.max(...near.map((pt) => pt[1])), 2)]);
+  }
+
+  // The strings run past the saddles to where they are anchored, so they are
+  // drawn out to the end of the bridge assembly.
+  const bridgeParts = collected.filter((c) => c.role === 'bridge' || c.role === 'holder');
+  const bridgeEndX = round(
+    Math.max(
+      ...bridgeParts.flatMap((c) => c.shapes.flatMap((sh) => sh.pts.map((pt) => toFrame(pt, c.dx, c.dy)[0]))),
+    ),
+    1,
+  );
+
   artwork[family] = {
     source: src.name,
     strings: src.strings,
@@ -353,6 +384,9 @@ for (const [family, src] of Object.entries(SOURCES)) {
       maxY: round(bounds.maxY, 1),
     },
     neckHalfNut: round(neckHalfNut, 2),
+    edgeTop,
+    edgeBottom,
+    bridgeEndX,
     pegs,
     parts,
   };
@@ -405,6 +439,12 @@ export interface Artwork {
   bounds: ArtBounds;
   /** Half the drawn neck's width at the nut. */
   neckHalfNut: number;
+  /** The drawn fretboard's top edge, sampled along its length. */
+  edgeTop: [number, number][];
+  /** Its bottom edge. */
+  edgeBottom: [number, number][];
+  /** Where the strings are anchored, past the saddles. */
+  bridgeEndX: number;
   /** Centre of each tuning machine, the lowest string's first. */
   pegs: [number, number][];
   parts: ArtPart[];

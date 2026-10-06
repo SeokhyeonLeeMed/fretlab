@@ -24,7 +24,7 @@ export function ControlPanel() {
     <>
       <InstrumentCard />
       <TuningCard />
-      {(mode === 'scale' || mode === 'chord') && <ScaleCard />}
+      {mode === 'scale' && <ScaleCard />}
       {mode === 'chord' && <ChordCard />}
     </>
   );

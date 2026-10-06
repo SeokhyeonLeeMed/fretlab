@@ -93,7 +93,9 @@ export function useTunerReadings(): TunerReadings {
       targets: ctx.openMidis.map((_, stringIndex) => ({
         stringIndex,
         state:
-          string && string.stringIndex === stringIndex
+          // Only mark a string when the note really is that string's, within
+          // a semitone; otherwise a fretted note elsewhere would light a peg.
+          string && string.stringIndex === stringIndex && Math.abs(string.cents) < 100
             ? string.verdict === 'in-tune'
               ? ('in-tune' as const)
               : ('active' as const)

@@ -34,6 +34,12 @@ export interface Voicing {
   bassPc: number;
   /** Position name for the UI: "Open", "Position 3", ... */
   position: string;
+  /**
+   * The fret held down by a barring finger, or null. A barre is the lowest
+   * fretted fret stopping two or more strings, with no open string, which is
+   * what lets a shape be moved anywhere up the neck.
+   */
+  barre: number | null;
   score: number;
 }
 
@@ -124,7 +130,17 @@ export function findVoicings(
     walk(0);
   }
 
-  return [...found.values()].sort((a, b) => a.score - b.score).slice(0, maxResults);
+  const ranked = [...found.values()].sort((a, b) => a.score - b.score);
+  const shortlist = ranked.slice(0, maxResults);
+  // A barre shape is how a chord is played anywhere but the open position, so
+  // always offer one when the tuning allows it. Scoring favours open shapes --
+  // they need fewer fingers and sit lower -- so without this a barre can be
+  // crowded out of the list entirely.
+  if (!shortlist.some((v) => v.barre !== null)) {
+    const barre = ranked.find((v) => v.barre !== null);
+    if (barre) shortlist.splice(Math.max(0, shortlist.length - 1), 1, barre);
+  }
+  return shortlist;
 }
 
 function toCandidate(frets: (number | null)[], openMidis: number[]): Candidate {
@@ -194,6 +210,10 @@ function evaluate(cand: Candidate, ctx: EvalCtx): Voicing | null {
 
   const fretted = cand.frets.filter((f): f is number => f !== null && f > 0);
   const lowestFret = fretted.length ? Math.min(...fretted) : 0;
+  const atLowest = cand.frets.filter((f) => f !== null && f === lowestFret).length;
+  const hasOpen = cand.frets.some((f) => f === 0);
+  const barre =
+    fretted.length > 0 && atLowest >= 2 && !hasOpen && sounding.length >= 3 ? lowestFret : null;
   const highestFret = fretted.length ? Math.max(...fretted) : 0;
   const span = spanOf(cand.frets);
   const fingers = fingersNeeded(cand.frets);
@@ -233,9 +253,12 @@ function evaluate(cand: Candidate, ctx: EvalCtx): Voicing | null {
     position:
       fretted.length === 0
         ? 'All open'
-        : cand.frets.includes(0) && lowestFret <= 4
-          ? 'Open position'
-          : `Position ${lowestFret}`,
+        : barre !== null
+          ? `Barre ${barre}`
+          : cand.frets.includes(0) && lowestFret <= 4
+            ? 'Open position'
+            : `Position ${lowestFret}`,
+    barre,
     score,
   };
 }
@@ -297,6 +320,7 @@ export function findPowerChords(
         inversion: 0,
         bassPc: rootPc,
         position: `String ${strings - s}, fret ${f}`,
+        barre: fingers === 1 && fretted.length >= 2 ? fretted[0] : null,
         score: f + span * 0.5 + (strings - s) * 0.1,
       });
     }

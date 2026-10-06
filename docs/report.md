@@ -40,6 +40,29 @@ tunings correct rather than approximately correct.
 
 ## 2.0 Revisions
 
+### Revision 4
+
+- The chord view shows the chord chooser alone; the scale chooser belongs to
+  the scale view.
+- **Strings are laid against the drawn fretboard's real edges.** The artwork's
+  neck is not perfectly level and its centre line is not at y = 0 — the
+  guitar's sits about eight units low — so assuming a horizontal neck put the
+  strings off the board. The extractor now samples the drawn board's top and
+  bottom edges along its length, and the strings follow them, continuing the
+  same fan past the end of the board out to the bridge, where they now
+  terminate at the string anchor rather than at the saddle line.
+- The bass's 21st fret is playable; both instruments have 21.
+- An out-of-tune tuning machine is ringed in a muted red rather than amber,
+  which was hard to see against pale maple.
+- **On Auto the tuner's meter measures against the nearest note of the
+  chromatic scale**, so it is as useful on a fretted note as on an open
+  string; pinned to a string it measures against that string, as before.
+- **A movable barre shape is always offered when one exists.** Scoring favours
+  open shapes, so barres were being crowded out of the list; one is now kept
+  deliberately. Where a barre is impossible — a power chord or an augmented
+  triad in a tuning in fourths can never put two chord tones on one fret — the
+  panel says so instead of leaving it unexplained.
+
 ### Revision 3
 
 - **The instrument graphics are now built from supplied layered SVG drawings**

@@ -82,7 +82,7 @@ describe('switching instruments reconfigures everything', () => {
     // positions per string: 22 frets plus the open string for guitars, 20 for
     // basses.
     ['Guitar', 6, '6-string guitar', 6, 22, 'E2, string 6, open'],
-    ['Bass', 4, '4-string bass', 4, 21, 'E1, string 4, open'],
+    ['Bass', 4, '4-string bass', 4, 22, 'E1, string 4, open'],
   ] as const)('%s %s-string shows %s', (family, count, label, strings, positions, lowestOpen) => {
     render(<App />);
     chooseInstrument(family, count);
@@ -245,10 +245,12 @@ describe('the control panel follows the mode', () => {
     expect(selectsNamed(/Root note/i)).toHaveLength(1);
     expect(screen.queryByLabelText(/Chord type/i)).toBeNull();
 
+    // Chord mode shows the chord chooser only: the scale chooser would just
+    // be a second thing to confuse it with.
     fireEvent.click(screen.getByRole('button', { name: 'Chords' }));
-    expect(screen.getByText('Scale / mode')).toBeTruthy();
+    expect(screen.queryByText('Scale / mode')).toBeNull();
     expect(selectNamed(/Chord type/i)).toBeTruthy();
-    expect(selectsNamed(/Root note/i)).toHaveLength(2);
+    expect(selectsNamed(/Root note/i)).toHaveLength(1);
   });
 
   it('hides them again in Tuner mode', () => {
@@ -376,7 +378,7 @@ describe('chord mode', () => {
     render(<App />);
     openChords();
     fireEvent.change(selectNamed(/Preset/i), { target: { value: 'drop-d' } });
-    fireEvent.change(selectsNamed(/Root note/i)[1], { target: { value: 'D' } });
+    fireEvent.change(selectsNamed(/Root note/i)[0], { target: { value: 'D' } });
     fireEvent.change(selectNamed(/Chord type/i), { target: { value: '5oct' } });
     const labels = within(screen.getByRole('group', { name: 'Chord shapes' }))
       .getAllByRole('button')
@@ -562,7 +564,7 @@ describe('strumming and note playback', () => {
     const started = installFakeAudio();
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Chords' }));
-    fireEvent.change(selectsNamed(/Root note/i)[1], { target: { value: 'C' } });
+    fireEvent.change(selectsNamed(/Root note/i)[0], { target: { value: 'C' } });
     fireEvent.change(selectNamed(/Chord type/i), { target: { value: 'maj' } });
 
     const shapes = within(screen.getByRole('group', { name: 'Chord shapes' })).getAllByRole('button');

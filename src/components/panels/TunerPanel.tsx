@@ -23,7 +23,11 @@ export function TunerPanel({ visible }: { visible: boolean }) {
   const { snapshot, chromatic, string } = useTunerReadings();
   const { playNote } = usePlayback();
 
-  const reading = string ?? chromatic;
+  // On Auto the meter follows whatever note is played, measured against the
+  // nearest note of the chromatic scale — so it is just as useful on a
+  // fretted note as on an open string. Pinned to a string, it measures
+  // against that string's target instead.
+  const reading = pinned === null ? chromatic : string;
   const cents = reading?.cents ?? 0;
   const verdict = reading?.verdict ?? 'in-tune';
   const needle = needlePosition(cents);
@@ -58,7 +62,9 @@ export function TunerPanel({ visible }: { visible: boolean }) {
                   <span>
                     Target{' '}
                     <b>
-                      {string ? `${string.targetName} ${string.targetFreq.toFixed(2)} Hz` : '—'}
+                      {reading
+                        ? `${pinned === null ? chromatic?.fullName : string?.targetName} ${reading.targetFreq.toFixed(2)} Hz`
+                        : '—'}
                     </b>
                   </span>
                   <span>
@@ -126,7 +132,10 @@ export function TunerPanel({ visible }: { visible: boolean }) {
                   That is {chromatic?.fullName}, not the {string?.targetName} string
                 </span>
               ) : verdict === 'in-tune' ? (
-                <>✓ In tune{string ? ` — ${string.targetName}` : ''}</>
+                <>
+                  ✓ In tune
+                  {pinned === null ? (chromatic ? ` — ${chromatic.fullName}` : '') : string ? ` — ${string.targetName}` : ''}
+                </>
               ) : verdict === 'flat' ? (
                 <>▲ Flat by {Math.abs(cents).toFixed(0)} cents — tighten the string</>
               ) : (

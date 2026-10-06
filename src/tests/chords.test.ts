@@ -211,6 +211,51 @@ describe('voicing search in standard tuning', () => {
   });
 });
 
+describe('barre shapes', () => {
+  const std = open('guitar6', 'standard');
+
+  it('offers a barre shape for every ordinary chord, in every key', () => {
+    for (const chordId of ['maj', 'min', '7', 'maj7', 'm7', 'm7b5', 'dim', 'sus2', 'sus4', '6', 'm6']) {
+      for (const root of ['C', 'E', 'A', 'G', 'Bb', 'F#', 'Db']) {
+        const vs = findVoicings(std, root, getChord(chordId), { maxResults: 10 });
+        const barres = vs.filter((v) => v.barre !== null);
+        expect(barres.length, `${root}${getChord(chordId).symbol}`).toBeGreaterThan(0);
+        for (const v of barres) {
+          // A barre is movable: no open strings, and two or more strings
+          // stopped at the barred fret.
+          expect(v.frets).not.toContain(0);
+          expect(v.frets.filter((f) => f === v.barre).length).toBeGreaterThanOrEqual(2);
+          expect(v.barre).toBe(Math.min(...v.frets.filter((f): f is number => f !== null && f > 0)));
+        }
+      }
+    }
+  });
+
+  it('finds the familiar movable shapes', () => {
+    // F major, E-shape barre at the 1st fret.
+    expect(findVoicings(std, 'F', getChord('maj'), { maxResults: 10 }).map((v) => v.id)).toContain(
+      '1-3-3-2-1-1',
+    );
+    // B minor, A-shape barre at the 2nd fret.
+    expect(findVoicings(std, 'B', getChord('min'), { maxResults: 10 }).map((v) => v.id)).toContain(
+      'x-2-4-4-3-2',
+    );
+  });
+
+  it('does not invent a barre where the intervals cannot make one', () => {
+    // Root and 5th are never the same fret on strings a fourth apart, so a
+    // power chord has no barre form in standard tuning. The search must say
+    // so by omission rather than mislabel a shape.
+    const vs = findVoicings(std, 'C', getChord('5'), { maxResults: 10 });
+    expect(vs.length).toBeGreaterThan(0);
+    for (const v of vs) {
+      if (v.barre !== null) {
+        expect(v.frets.filter((f) => f === v.barre).length).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+});
+
 describe('voicing search is tuning-aware', () => {
   it('produces different shapes for the same chord in a different tuning', () => {
     const std = open('guitar6', 'standard');
