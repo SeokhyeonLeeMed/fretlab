@@ -255,13 +255,12 @@ describe('voicing search is tuning-aware', () => {
     }
   });
 
-  it('finds chords on the 7-string guitar and on both basses', () => {
+  it('finds chords on the bass as well as the guitar', () => {
     for (const [instrument, root, chordId] of [
-      ['guitar7', 'B', 'min'],
-      ['guitar7', 'E', 'maj'],
       ['bass4', 'E', '5'],
-      ['bass5', 'B', '5'],
       ['bass4', 'G', 'maj'],
+      ['bass4', 'A', 'min'],
+      ['guitar6', 'B', 'min'],
     ] as const) {
       const o = open(instrument, 'standard');
       const vs = findVoicings(o, root, getChord(chordId), { maxResults: 4 });
@@ -321,10 +320,9 @@ describe('power chords', () => {
       ['guitar6', 'standard'],
       ['guitar6', 'drop-d'],
       ['guitar6', 'drop-b'],
-      ['guitar7', 'standard'],
-      ['guitar7', 'drop-g'],
+      ['guitar6', 'dadgad'],
       ['bass4', 'standard'],
-      ['bass5', 'standard'],
+      ['bass4', 'bead'],
     ] as const) {
       const o = open(instrument, tuningId);
       for (const root of ['E', 'G', 'A', 'C', 'F#']) {

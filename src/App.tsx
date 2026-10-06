@@ -167,8 +167,7 @@ export function App() {
       <footer className="app-footer">
         <span>
           FretLab — all note names, scales, chord shapes and tuner targets are calculated from the
-          selected tuning. Instrument outlines traced from photographs by AvR (CC BY-SA 4.0) and
-          Freebird (CC BY 2.5) on Wikimedia Commons; not affiliated with Fender.
+          selected tuning.
         </span>
         <span>
           {ctx.instrument.name} · {ctx.tuning.notes.join(' ')} · {ctx.scaleName}

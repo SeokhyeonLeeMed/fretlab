@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_레이어_2" data-name="레이어 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 202.59 19.27">
+  <defs>
+    <style>
+      .cls-1 {
+        stroke-width: .41px;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6, .cls-7, .cls-8, .cls-9, .cls-10, .cls-11, .cls-12 {
+        stroke: #040000;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6, .cls-7, .cls-9, .cls-10, .cls-11, .cls-12 {
+        fill: #fff;
+      }
+
+      .cls-2 {
+        stroke-width: .41px;
+      }
+
+      .cls-3 {
+        stroke-width: .41px;
+      }
+
+      .cls-4 {
+        stroke-width: .41px;
+      }
+
+      .cls-5 {
+        stroke-width: .41px;
+      }
+
+      .cls-6 {
+        stroke-width: .41px;
+      }
+
+      .cls-7 {
+        stroke-width: .41px;
+      }
+
+      .cls-8 {
+        fill: #b4b3b3;
+      }
+
+      .cls-8, .cls-10 {
+        stroke-width: .45px;
+      }
+
+      .cls-9 {
+        stroke-width: .41px;
+      }
+
+      .cls-11 {
+        stroke-width: .41px;
+      }
+
+      .cls-12 {
+        stroke-width: .41px;
+      }
+    </style>
+  </defs>
+  <g id="_레이어_1-2" data-name="레이어 1">
+    <g>
+      <g>
+        <rect class="cls-8" x="10.32" y="9.35" width="14.4" height="1.16" transform="translate(7.47 27.38) rotate(-89.6)"/>
+        <rect class="cls-8" x="25.56" y="9.35" width="14.4" height="1.16" transform="translate(22.6 42.63) rotate(-89.6)"/>
+        <rect class="cls-8" x="39.9" y="9.16" width="14.4" height="1.16" transform="translate(37.04 56.77) rotate(-89.6)"/>
+        <rect class="cls-8" x="52.91" y="9.25" width="15" height="1.16" transform="translate(50.16 70.16) rotate(-89.6)"/>
+        <rect class="cls-8" x="65.39" y="9.24" width="15.6" height="1.16" transform="translate(62.87 82.94) rotate(-89.6)"/>
+        <rect class="cls-8" x="77.13" y="9.07" width="15.89" height="1.16" transform="translate(74.83 94.66) rotate(-89.6)"/>
+        <rect class="cls-8" x="88.43" y="9.25" width="16.29" height="1.16" transform="translate(86.07 106.33) rotate(-89.6)"/>
+        <rect class="cls-8" x="98.87" y="9.18" width="16.59" height="1.16" transform="translate(96.66 116.85) rotate(-89.6)"/>
+        <rect class="cls-8" x="108.84" y="9.25" width="16.79" height="1.16" transform="translate(106.6 126.99) rotate(-89.6)"/>
+        <rect class="cls-8" x="118.12" y="9.16" width="17.09" height="1.16" transform="translate(116.04 136.34) rotate(-89.6)"/>
+        <rect class="cls-8" x="127.17" y="9.13" width="17.09" height="1.16" transform="translate(125.06 145.35) rotate(-89.6)"/>
+        <rect class="cls-8" x="135.51" y="9.23" width="17.18" height="1.16" transform="translate(133.29 153.85) rotate(-89.6)"/>
+        <rect class="cls-8" x="143.47" y="9.14" width="17.28" height="1.16" transform="translate(141.33 161.76) rotate(-89.6)"/>
+        <rect class="cls-8" x="150.94" y="9.24" width="17.58" height="1.16" transform="translate(148.8 169.49) rotate(-89.6)"/>
+        <rect class="cls-8" x="157.62" y="9.09" width="18.18" height="1.16" transform="translate(155.88 176.31) rotate(-89.6)"/>
+        <rect class="cls-8" x="164.57" y="9.04" width="17.98" height="1.16" transform="translate(162.73 183.11) rotate(-89.6)"/>
+        <rect class="cls-8" x="170.57" y="8.98" width="18.38" height="1.16" transform="translate(168.94 189.25) rotate(-89.6)"/>
+        <rect class="cls-8" x="176.77" y="9.13" width="18.38" height="1.16" transform="translate(174.95 195.59) rotate(-89.6)"/>
+        <rect class="cls-8" x="181.99" y="9.07" width="18.77" height="1.16" transform="translate(180.4 200.96) rotate(-89.6)"/>
+        <rect class="cls-8" x="187.49" y="9.1" width="18.38" height="1.16" transform="translate(185.63 206.29) rotate(-89.6)"/>
+        <rect class="cls-8" x="192.33" y="9.04" width="18.77" height="1.16" transform="translate(190.69 211.26) rotate(-89.6)"/>
+      </g>
+      <g>
+        <path class="cls-3" d="M39.9,8.74c.62,0,1.12.51,1.12,1.14s-.51,1.12-1.13,1.12-1.12-.51-1.12-1.14.51-1.12,1.13-1.12Z"/>
+        <path class="cls-12" d="M66.76,8.66c.62,0,1.12.51,1.12,1.14s-.51,1.12-1.13,1.12-1.12-.51-1.12-1.14.51-1.12,1.13-1.12Z"/>
+        <path class="cls-7" d="M90.79,8.7c.62,0,1.12.51,1.12,1.14s-.51,1.12-1.13,1.12-1.12-.51-1.12-1.14.51-1.12,1.13-1.12Z"/>
+        <path class="cls-9" d="M112.14,8.65c.62,0,1.12.51,1.12,1.14s-.51,1.12-1.13,1.12-1.12-.51-1.12-1.14.51-1.12,1.13-1.12Z"/>
+        <path class="cls-11" d="M139.93,13.01c.62,0,1.12.51,1.12,1.14s-.51,1.12-1.13,1.12-1.12-.51-1.12-1.14.51-1.12,1.13-1.12Z"/>
+        <path class="cls-1" d="M139.82,3.94c.62,0,1.12.51,1.12,1.14s-.51,1.12-1.13,1.12-1.12-.51-1.12-1.14.51-1.12,1.13-1.12Z"/>
+        <path class="cls-6" d="M163.12,8.47c.62,0,1.12.51,1.12,1.14s-.51,1.12-1.13,1.12-1.12-.51-1.12-1.14.51-1.12,1.13-1.12Z"/>
+        <path class="cls-4" d="M176.47,8.57c.62,0,1.12.51,1.12,1.14s-.51,1.12-1.13,1.12-1.12-.51-1.12-1.14.51-1.12,1.13-1.12Z"/>
+        <path class="cls-5" d="M188.44,8.52c.62,0,1.12.51,1.12,1.14s-.51,1.12-1.13,1.12-1.12-.51-1.12-1.14.51-1.12,1.13-1.12Z"/>
+        <path class="cls-2" d="M199.2,8.46c.62,0,1.12.51,1.12,1.14s-.51,1.12-1.13,1.12-1.12-.51-1.12-1.14.51-1.12,1.13-1.12Z"/>
+      </g>
+      <rect class="cls-10" x="-6.34" y="9.33" width="14.4" height="1.16" transform="translate(-9.06 10.7) rotate(-89.6)"/>
+    </g>
+  </g>
+</svg>

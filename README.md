@@ -5,8 +5,8 @@ tuning you like, and the whole neck re-derives itself: note names, scale
 highlighting, chord shapes, playback and the tuner's targets. Everything runs
 in the browser — no server, no accounts, no audio files, no paid domain.
 
-- **Four instruments**: pick Guitar or Bass, then 6- or 7-string / 4- or 5-string.
-- **32 tuning presets plus a custom tuning editor**, per instrument.
+- **Two instruments**: a 6-string guitar and a 4-string bass.
+- **20 tuning presets plus a custom tuning editor**, per instrument.
 - **27 scales and modes**, **21 chord types**.
 - **Chord shapes that are searched for, not stored**, so alternate tunings are
   correct by construction rather than by a lookup table.
@@ -366,10 +366,8 @@ position — not a default.
 
 | Instrument | Strings | Frets | Default tuning | Tuning presets |
 | --- | --- | --- | --- | --- |
-| 6-string guitar | 6 | 22 | E2 A2 D3 G3 B3 E4 | 13 + custom |
-| 7-string guitar | 7 | 24 | B1 E2 A2 D3 G3 B3 E4 | 7 + custom |
-| 4-string bass | 4 | 21 | E1 A1 D2 G2 | 7 + custom |
-| 5-string bass | 5 | 22 | B0 E1 A1 D2 G2 | 5 + custom |
+| 6-string guitar | 6 | 21 | E2 A2 D3 G3 B3 E4 | 13 + custom |
+| 4-string bass | 4 | 20 | E1 A1 D2 G2 | 7 + custom |
 
 ### Tuning presets
 
@@ -392,19 +390,6 @@ position — not a default.
 | DADGAD | D2 A2 D3 G3 A3 D4 |
 | Custom | any note you enter, per string |
 
-**7-string guitar**
-
-| Preset | Open strings (lowest first) |
-| --- | --- |
-| Standard | B1 E2 A2 D3 G3 B3 E4 |
-| Half step down | Bb1 Eb2 Ab2 Db3 Gb3 Bb3 Eb4 |
-| A standard (whole step down) | A1 D2 G2 C3 F3 A3 D4 |
-| Drop A | A1 E2 A2 D3 G3 B3 E4 |
-| Drop G | G1 D2 G2 C3 F3 A3 D4 |
-| Drop G# | G#1 D#2 G#2 C#3 F#3 A#3 D#4 |
-| Russian / Lydian 7 | A1 E2 A2 C#3 E3 A3 E4 |
-| Custom | any note you enter, per string |
-
 **4-string bass**
 
 | Preset | Open strings (lowest first) |
@@ -416,17 +401,6 @@ position — not a default.
 | Drop C | C1 G1 C2 F2 |
 | BEAD (low B) | B0 E1 A1 D2 |
 | Tenor | A1 D2 G2 C3 |
-| Custom | any note you enter, per string |
-
-**5-string bass**
-
-| Preset | Open strings (lowest first) |
-| --- | --- |
-| Standard | B0 E1 A1 D2 G2 |
-| Half step down | Bb0 Eb1 Ab1 Db2 Gb2 |
-| Whole step down | A0 D1 G1 C2 F2 |
-| Drop A | A0 E1 A1 D2 G2 |
-| Tenor | E1 A1 D2 G2 C3 |
 | Custom | any note you enter, per string |
 
 ### Scales and modes
@@ -616,19 +590,15 @@ readings listed in section 11.
 
 ## 16. Licence and assets
 
-The instrument outlines — body, pickguard, hardware and headstock — are traced
-from two freely licensed photographs of real instruments on Wikimedia Commons:
-a Fender Custom Shop Stratocaster by AvR (CC BY-SA 4.0) and a 1966 Fender Jazz
-Bass by Freebird (CC BY 2.5). Both licences allow adaptation with attribution,
-which is given in the footer and in `reference/README.md`; the whole tracing
-pipeline is in `reference/trace/` and can be re-run with
-`python reference/trace/run.py`. Fender, Stratocaster and Jazz Bass are
-trademarks of Fender Musical Instruments Corporation; FretLab is independent and
-unaffiliated.
+The instrument graphics are built from the layered SVG drawings in
+`reference/`, one folder per instrument, supplied with the project. They are
+assembled into `src/components/fretboard/artwork.ts` by
+`node tools/extract-artwork.mjs`; `reference/README.md` explains how, including
+how the drawing's own fret lines are used to align it with FretLab's computed
+fretboard.
 
-Everything else is generated: the neck, frets, inlays, strings and note markers
-are computed from the tuning, and all sound is synthesised at runtime, so there
-are no samples. The interface typeface is
-[Noto Sans](https://fonts.google.com/noto/specimen/Noto+Sans), served by Google
+Everything else is generated: the strings, note markers and fret numbers are
+computed from the tuning, and all sound is synthesised at runtime, so there are
+no samples. The interface typeface is [Noto Sans](https://fonts.google.com/noto/specimen/Noto+Sans), served by Google
 Fonts under the SIL Open Font License, with a system-font fallback stack for
 when it cannot be fetched.

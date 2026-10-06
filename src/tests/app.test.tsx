@@ -44,9 +44,8 @@ const selectsNamed = (name: RegExp): HTMLElement[] =>
 const selectNamed = (name: RegExp): HTMLElement => selectsNamed(name)[0];
 
 /** Choose an instrument through the two-step Type / Strings selector. */
-const chooseInstrument = (family: 'Guitar' | 'Bass', strings: number): void => {
+const chooseInstrument = (family: 'Guitar' | 'Bass', _strings?: number): void => {
   fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${family}$`) }));
-  fireEvent.click(screen.getByRole('button', { name: `${strings}-string` }));
 };
 
 describe('the application renders and is navigable', () => {
@@ -55,7 +54,6 @@ describe('the application renders and is navigable', () => {
     expect(screen.getByRole('group', { name: /6-string guitar fretboard/i })).toBeTruthy();
     expect(screen.getByRole('grid', { name: /Fretboard/i })).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Type' })).toBeTruthy();
-    expect(screen.getByRole('group', { name: 'Strings' })).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Interaction mode' })).toBeTruthy();
     expect(screen.getByText('Current selection')).toBeTruthy();
   });
@@ -63,8 +61,8 @@ describe('the application renders and is navigable', () => {
   it('exposes one grid cell per string and fret, with real note names', () => {
     render(<App />);
     const names = cellNames();
-    // 6 strings x 23 positions (open plus 22 frets)
-    expect(names).toHaveLength(6 * 23);
+    // 6 strings x 22 positions (open plus 21 frets)
+    expect(names).toHaveLength(6 * 22);
     expect(names).toContain('E2, string 6, open');
     expect(names).toContain('E4, string 1, open');
     expect(names).toContain('G2, string 6, fret 3');
@@ -83,10 +81,8 @@ describe('switching instruments reconfigures everything', () => {
     // Every instrument in a family has the same neck, so the same number of
     // positions per string: 22 frets plus the open string for guitars, 20 for
     // basses.
-    ['Guitar', 6, '6-string guitar', 6, 23, 'E2, string 6, open'],
-    ['Guitar', 7, '7-string guitar', 7, 23, 'B1, string 7, open'],
+    ['Guitar', 6, '6-string guitar', 6, 22, 'E2, string 6, open'],
     ['Bass', 4, '4-string bass', 4, 21, 'E1, string 4, open'],
-    ['Bass', 5, '5-string bass', 5, 21, 'B0, string 5, open'],
   ] as const)('%s %s-string shows %s', (family, count, label, strings, positions, lowestOpen) => {
     render(<App />);
     chooseInstrument(family, count);
@@ -98,10 +94,10 @@ describe('switching instruments reconfigures everything', () => {
 
   it('offers only that instrument’s tuning presets', () => {
     render(<App />);
-    chooseInstrument('Bass', 5);
+    chooseInstrument('Bass');
     const select = selectNamed(/Preset/i) as HTMLSelectElement;
     const labels = [...select.options].map((o) => o.text);
-    expect(labels.some((l) => l.includes('B E A D G'))).toBe(true);
+    expect(labels.some((l) => l.includes('E A D G'))).toBe(true);
     expect(labels.some((l) => l.includes('E A D G B E'))).toBe(false);
   });
 });
@@ -116,27 +112,17 @@ describe('the instrument selector', () => {
     ]);
   });
 
-  it('offers the string counts of the chosen type', () => {
+  it('does not offer a string-count choice while each type has one instrument', () => {
     render(<App />);
-    const counts = (): string[] =>
-      within(screen.getByRole('group', { name: 'Strings' }))
-        .getAllByRole('button')
-        .map((b) => b.textContent ?? '');
-    expect(counts()).toEqual(['6-string', '7-string']);
-
-    fireEvent.click(screen.getByRole('button', { name: /^Bass$/ }));
-    expect(counts()).toEqual(['4-string', '5-string']);
+    expect(screen.queryByRole('group', { name: 'Strings' })).toBeNull();
   });
 
-  it('remembers the instrument last used in each type', () => {
+  it('switches instrument with the type', () => {
     render(<App />);
-    chooseInstrument('Guitar', 7);
-    chooseInstrument('Bass', 5);
-    // Going back to Guitar returns to the 7-string, not to the default.
-    fireEvent.click(screen.getByRole('button', { name: /^Guitar$/ }));
-    expect(useStore.getState().instrumentId).toBe('guitar7');
     fireEvent.click(screen.getByRole('button', { name: /^Bass$/ }));
-    expect(useStore.getState().instrumentId).toBe('bass5');
+    expect(useStore.getState().instrumentId).toBe('bass4');
+    fireEvent.click(screen.getByRole('button', { name: /^Guitar$/ }));
+    expect(useStore.getState().instrumentId).toBe('guitar6');
   });
 });
 
@@ -343,7 +329,7 @@ describe('scale mode', () => {
   it('turning labels off keeps the positions clickable', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('switch', { name: /Show note labels/i }));
-    expect(cellNames()).toHaveLength(6 * 23);
+    expect(cellNames()).toHaveLength(6 * 22);
   });
 });
 
@@ -712,7 +698,7 @@ describe('tuner mode', () => {
 describe('settings persistence', () => {
   it('remembers the instrument, tuning, scale, theme and volume', () => {
     const { unmount } = render(<App />);
-    chooseInstrument('Bass', 5);
+    chooseInstrument('Bass');
     fireEvent.change(selectNamed(/Preset/i), { target: { value: 'tenor' } });
     fireEvent.click(screen.getByRole('button', { name: 'Light' }));
     act(() => useStore.getState().setVolume(0.33));
@@ -720,7 +706,7 @@ describe('settings persistence', () => {
 
     const saved = JSON.parse(localStorage.getItem('fretlab.settings.v1') ?? '{}');
     expect(saved.state).toMatchObject({
-      instrumentId: 'bass5',
+      instrumentId: 'bass4',
       tuningId: 'tenor',
       theme: 'light',
       volume: 0.33,
@@ -755,7 +741,8 @@ describe('keyboard accessibility', () => {
     expect(screen.getByText('Selected note').closest('.info-tile')?.textContent).toContain('B2');
 
     fireEvent.keyDown(grid, { key: 'End' });
-    expect(screen.getByRole('grid', { name: /Current position: G4/i })).toBeTruthy();
+    // The last fret is 21; on the A string that is F#4.
+    expect(screen.getByRole('grid', { name: /Current position: F#4/i })).toBeTruthy();
     fireEvent.keyDown(grid, { key: 'Home' });
     expect(screen.getByRole('grid', { name: /Current position: A2/i })).toBeTruthy();
   });

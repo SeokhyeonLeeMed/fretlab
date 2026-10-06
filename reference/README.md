@@ -1,45 +1,42 @@
-# Reference photographs
+# Reference drawings
 
-FretLab's body, pickguard, hardware and headstock outlines are traced from two
-photographs of real instruments on Wikimedia Commons:
+The instrument graphics are built from layered SVG drawings supplied with this
+project, one folder per instrument:
 
-| File | Instrument | Author | Licence |
-| --- | --- | --- | --- |
-| `strat.png` | Fender Custom Shop Stratocaster | AvR | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
-| `jazz.jpg` | Fender Jazz Bass, 1966 | Freebird | [CC BY 2.5](https://creativecommons.org/licenses/by/2.5/) |
+| Folder | Instrument | Strings |
+| --- | --- | --- |
+| `Stratocaster/` | Stratocaster-style electric guitar | 6 |
+| `Precision Bass/` | Precision-Bass-style electric bass | 4 |
 
-Sources:
-<https://commons.wikimedia.org/wiki/File:Fender_Stratocaster_Relic_FCS_AvR.png> and
-<https://commons.wikimedia.org/wiki/File:Fenderjazzbass1966.jpg>.
+Each folder holds the whole instrument (`Full Guitar.svg`) plus one file per
+part — body, pickguard, bridge, head, neck, frets, tuning machine and so on.
 
-Both licences permit reuse and adaptation with attribution, which is given here
-and in the application's footer. The derived outlines are a transformation of
-these photographs and carry the same share-alike obligation where it applies.
+## How they become artwork
 
-## How the tracing works
+`node tools/extract-artwork.mjs` regenerates
+`src/components/fretboard/artwork.ts` from these files. It does three things.
 
-`trace/` holds the pipeline; `python trace/run.py` reproduces it end to end.
+**It puts the parts back in one coordinate system.** Each part file is cropped
+to its own bounds, so its position within the whole drawing is lost. A shape's
+*size* does not change when it is moved, so every part shape is matched to the
+whole drawing's shape of the same size and the difference in position gives the
+offset. Taking the commonest answer across all of a part's shapes makes this
+immune to a coincidental match.
 
-1. **Segment** the instrument from its background — by alpha channel for the
-   guitar, by backdrop colour for the bass — and lay the neck horizontal.
-2. **Find the frets.** A fret is a bright line spanning the whole neck, which
-   distinguishes it from an inlay dot or a patch of grain. The equal-tempered
-   fret rule is then fitted to the detected lines, which recovers the nut
-   position and the scale length in pixels. Both photographs fit to within
-   about one pixel, and the recovered nut widths come out at 1.64" and 1.48"
-   against real specifications of 1.650" and 1.500" — so the photographs are
-   accurate to about one percent, and the geometry derived from them is sound.
-3. **Rectify** into the instrument frame: origin at the nut, +x along the
-   strings, scale length exactly 1000 units.
-4. **Trace each part.** The body is the silhouette past the horn tips; the
-   pickguard is the region enclosed by its own black edge ply; pickups come
-   from their pole pieces; knobs from a circle fit.
+**It finds the instrument frame.** The drawing's own fret lines are measured
+and the equal-tempered fret rule is fitted to them, which recovers the nut
+position and the scale length in drawing units. Both drawings fit to better
+than one part in a thousand of the scale length. Everything is then
+re-expressed with the nut at the origin and the scale length exactly 1000
+units, so FretLab's computed fret positions land on the drawn frets.
 
-Only the outlines are used. The neck, frets, inlays and strings in the
-photographs are discarded: FretLab computes those from the tuning and from
-equal-tempered fret spacing, which is why they stay correct for any tuning and
-any number of strings.
+**It corrects the headstock logo.** The drawings are laid out with the bass side
+downwards, which is how FretLab reads a fretboard but leaves the logo upside
+down; the logo glyphs alone are turned back the right way up.
 
-Fender, Stratocaster and Jazz Bass are trademarks of Fender Musical Instruments
-Corporation. FretLab is an independent learning tool, not affiliated with or
-endorsed by Fender.
+## What FretLab draws itself
+
+Only the instrument is artwork. The strings, the note markers, the fret numbers
+and every musical decision are computed from the selected tuning, which is why
+they stay correct for any tuning. The drawn frets and inlays are used as they
+are, since the frame is fitted to them.

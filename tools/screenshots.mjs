@@ -36,20 +36,17 @@ await page.getByRole('button', { name: 'Chords', exact: true }).click();
 await shot('02-chord-guitar6');
 
 // 3. 7-string + drop G
-await page.getByRole('button', { name: 'Guitar', exact: true }).click();
-await page.getByRole('button', { name: '7-string' }).click();
-await page.selectOption('select >> nth=0', 'drop-g');
-await shot('03-guitar7-dropg');
+await page.getByRole('button', { name: 'Bass', exact: true }).click();
+await page.selectOption('select >> nth=0', 'drop-d');
+await shot('03-bass-dropd');
 
 // 4. 5-string bass, scale mode
 await page.getByRole('button', { name: 'Scale', exact: true }).click();
 await page.getByRole('button', { name: 'Bass', exact: true }).click();
-await page.getByRole('button', { name: '5-string' }).click();
-await shot('04-bass5-scale');
+await shot('04-bass-scale');
 
 // 5. tuner camera (denied mic, so the error path shows)
 await page.getByRole('button', { name: 'Guitar', exact: true }).click();
-await page.getByRole('button', { name: '6-string' }).click();
 await page.getByRole('button', { name: 'Tuner', exact: true }).click();
 await page.waitForTimeout(1200);
 await shot('05-tuner-camera');

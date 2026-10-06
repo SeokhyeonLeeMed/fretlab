@@ -33,15 +33,6 @@ export interface InstrumentDef {
   /** Scale length in inches; used for proportionate neck drawing. */
   scaleLengthIn: number;
   display: {
-    /**
-     * Body silhouette. 'offset-double-cutaway' is the classic bolt-on
-     * electric guitar outline; 'offset-bass' is its long-horned bass
-     * counterpart. Both are drawn from original profile data in
-     * components/fretboard/geometry.ts.
-     */
-    bodyStyle: 'offset-double-cutaway' | 'offset-bass';
-    /** Headstock outline; both are six/four-in-a-row designs. */
-    headstock: 'inline-guitar' | 'inline-bass';
     bodyColor: string;
     bodyEdgeColor: string;
     fretboardColor: string;
@@ -67,15 +58,6 @@ export const GUITAR6_TUNINGS: Tuning[] = [
   t('dadgad', 'DADGAD — D A D G A D', ['D2', 'A2', 'D3', 'G3', 'A3', 'D4']),
 ];
 
-export const GUITAR7_TUNINGS: Tuning[] = [
-  t('standard', 'Standard — B E A D G B E', ['B1', 'E2', 'A2', 'D3', 'G3', 'B3', 'E4']),
-  t('half-down', 'Half step down — Bb Eb Ab Db Gb Bb Eb', ['Bb1', 'Eb2', 'Ab2', 'Db3', 'Gb3', 'Bb3', 'Eb4']),
-  t('a-standard', 'A standard (whole step down) — A D G C F A D', ['A1', 'D2', 'G2', 'C3', 'F3', 'A3', 'D4']),
-  t('drop-a', 'Drop A — A E A D G B E', ['A1', 'E2', 'A2', 'D3', 'G3', 'B3', 'E4']),
-  t('drop-g', 'Drop G — G D G C F A D', ['G1', 'D2', 'G2', 'C3', 'F3', 'A3', 'D4']),
-  t('drop-g-sharp', 'Drop G# — G# D# G# C# F# A# D#', ['G#1', 'D#2', 'G#2', 'C#3', 'F#3', 'A#3', 'D#4']),
-  t('russian', 'Russian / Lydian 7 — A E A C# E A E', ['A1', 'E2', 'A2', 'C#3', 'E3', 'A3', 'E4']),
-];
 
 export const BASS4_TUNINGS: Tuning[] = [
   t('standard', 'Standard — E A D G', ['E1', 'A1', 'D2', 'G2']),
@@ -87,13 +69,6 @@ export const BASS4_TUNINGS: Tuning[] = [
   t('tenor', 'Tenor — A D G C', ['A1', 'D2', 'G2', 'C3']),
 ];
 
-export const BASS5_TUNINGS: Tuning[] = [
-  t('standard', 'Standard — B E A D G', ['B0', 'E1', 'A1', 'D2', 'G2']),
-  t('half-down', 'Half step down — Bb Eb Ab Db Gb', ['Bb0', 'Eb1', 'Ab1', 'Db2', 'Gb2']),
-  t('d-standard', 'Whole step down — A D G C F', ['A0', 'D1', 'G1', 'C2', 'F2']),
-  t('drop-a', 'Drop A — A E A D G', ['A0', 'E1', 'A1', 'D2', 'G2']),
-  t('tenor', 'Tenor — E A D G C', ['E1', 'A1', 'D2', 'G2', 'C3']),
-];
 
 export const INSTRUMENTS: InstrumentDef[] = [
   {
@@ -102,38 +77,16 @@ export const INSTRUMENTS: InstrumentDef[] = [
     shortName: 'Guitar 6',
     family: 'guitar',
     stringCount: 6,
-    fretCount: 22,
+    fretCount: 21,
     defaultTuningId: 'standard',
     tunings: GUITAR6_TUNINGS,
     stringGauges: [1.0, 0.86, 0.72, 0.58, 0.46, 0.36],
     scaleLengthIn: 25.5,
     display: {
-      bodyStyle: 'offset-double-cutaway',
-      headstock: 'inline-guitar',
       bodyColor: '#b5472b',
       bodyEdgeColor: '#6d2214',
       fretboardColor: '#43281a',
       pickguardColor: '#efe6d3',
-    },
-  },
-  {
-    id: 'guitar7',
-    name: '7-string guitar',
-    shortName: 'Guitar 7',
-    family: 'guitar',
-    stringCount: 7,
-    fretCount: 22,
-    defaultTuningId: 'standard',
-    tunings: GUITAR7_TUNINGS,
-    stringGauges: [1.12, 1.0, 0.86, 0.72, 0.58, 0.46, 0.36],
-    scaleLengthIn: 26.5,
-    display: {
-      bodyStyle: 'offset-double-cutaway',
-      headstock: 'inline-guitar',
-      bodyColor: '#2f3b52',
-      bodyEdgeColor: '#161e2c',
-      fretboardColor: '#2c2320',
-      pickguardColor: '#d9dde4',
     },
   },
   {
@@ -148,32 +101,10 @@ export const INSTRUMENTS: InstrumentDef[] = [
     stringGauges: [1.45, 1.22, 1.02, 0.84],
     scaleLengthIn: 34,
     display: {
-      bodyStyle: 'offset-bass',
-      headstock: 'inline-bass',
       bodyColor: '#2d6a5a',
       bodyEdgeColor: '#13382f',
       fretboardColor: '#3a2a1e',
       pickguardColor: '#e8e2d2',
-    },
-  },
-  {
-    id: 'bass5',
-    name: '5-string bass',
-    shortName: 'Bass 5',
-    family: 'bass',
-    stringCount: 5,
-    fretCount: 20,
-    defaultTuningId: 'standard',
-    tunings: BASS5_TUNINGS,
-    stringGauges: [1.62, 1.45, 1.22, 1.02, 0.84],
-    scaleLengthIn: 35,
-    display: {
-      bodyStyle: 'offset-bass',
-      headstock: 'inline-bass',
-      bodyColor: '#473169',
-      bodyEdgeColor: '#241440',
-      fretboardColor: '#241a14',
-      pickguardColor: '#ded6e6',
     },
   },
 ];
@@ -206,6 +137,13 @@ export function instrumentsOfFamily(family: InstrumentFamily): InstrumentDef[] {
   return INSTRUMENTS.filter((i) => i.family === family).sort(
     (a, b) => a.stringCount - b.stringCount,
   );
+}
+
+/** The instrument a family currently offers. */
+export function defaultOfFamily(family: InstrumentFamily): InstrumentDef {
+  const [first] = instrumentsOfFamily(family);
+  if (!first) throw new Error(`No instrument for family: ${family}`);
+  return first;
 }
 
 /** Every preset across every instrument, for the README/report tables. */

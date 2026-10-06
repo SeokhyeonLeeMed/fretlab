@@ -48,9 +48,7 @@ describe('frequency -> note detection', () => {
   it('detects every open string of every standard tuning', () => {
     const cases: [string, string][] = [
       ['guitar6', 'standard'],
-      ['guitar7', 'standard'],
       ['bass4', 'standard'],
-      ['bass5', 'standard'],
     ];
     for (const [id, tuningId] of cases) {
       for (const midi of openOf(id, tuningId)) {
@@ -130,7 +128,7 @@ describe('frequency -> note detection', () => {
         }
       }
     }
-    expect(checked).toBeGreaterThan(150);
+    expect(checked).toBeGreaterThan(100);
     expect(worst).toBeLessThan(15);
   });
 
@@ -263,9 +261,8 @@ describe('target-tuning comparison', () => {
       ['guitar6', 'half-down', 'Eb2'],
       ['guitar6', 'd-standard', 'D2'],
       ['guitar6', 'drop-c', 'C2'],
-      ['guitar7', 'standard', 'B1'],
       ['bass4', 'standard', 'E1'],
-      ['bass5', 'standard', 'B0'],
+      ['bass4', 'bead', 'B0'],
     ];
     for (const [id, tuningId, lowest] of cases) {
       const tuning = getTuning(getInstrument(id), tuningId);

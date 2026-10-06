@@ -38,7 +38,35 @@ tunings correct rather than approximately correct.
 
 # 2. What was built
 
-## 2.0 Revision 2
+## 2.0 Revisions
+
+### Revision 3
+
+- **The instrument graphics are now built from supplied layered SVG drawings**
+  of a Stratocaster-style guitar and a Precision-Bass-style bass, a file per
+  part. `tools/extract-artwork.mjs` reassembles the parts into one coordinate
+  system by matching shape sizes, fits the equal-tempered fret rule to the
+  drawings' own fret lines to recover the nut and scale length (to better than
+  one part in a thousand), and re-expresses everything with the nut at the
+  origin and the scale length at 1000 units — so FretLab's computed notes land
+  on the drawn frets. See `reference/README.md`.
+- **Pitch detection was wrong on most strings**, which is what made the tuner's
+  meter look as though it worked only for the lowest string. Three independent
+  faults, all fixed and covered by a test over every open string of every
+  tuning preset: an anti-alias filter whose corner sat near 290 Hz; a
+  decimation factor derived from the search range alone, which left a bass's
+  period only fifteen samples long; and a peak search that stepped over the
+  true period on strongly periodic signals. 38 failures became none.
+- **Pinning a string in the tuner is now obvious and reversible**, and when a
+  different string is played against a pinned target the readout says so
+  instead of leaving the needle pegged at one end.
+- **The 7-string guitar and 5-string bass were removed.**
+- **A reference-pitch setting** (A4, 392-466 Hz) retunes playback, the tuner's
+  targets and every displayed frequency.
+- The scale and chord choosers appear only in their own modes; fret numbers
+  appear only on frets that carry position markers.
+
+### Revision 2
 
 After the first build was reviewed, six changes were made:
 

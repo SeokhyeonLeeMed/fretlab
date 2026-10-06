@@ -72,7 +72,6 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
   const [gridFocused, setGridFocused] = useState(false);
   const gridRef = useRef<SVGGElement>(null);
 
-  const d = geo.instrument.display;
   const frets = useMemo(
     () => Array.from({ length: geo.fretCount + 1 }, (_, i) => i),
     [geo.fretCount],
@@ -192,119 +191,64 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
       aria-label={`${geo.instrument.name} fretboard`}
       style={{ display: 'block' }}
     >
-      <defs>
-        <linearGradient id="fl-board" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={lighten(d.fretboardColor, 0.2)} />
-          <stop offset="0.45" stopColor={d.fretboardColor} />
-          <stop offset="1" stopColor={darken(d.fretboardColor, 0.3)} />
-        </linearGradient>
-      </defs>
-
-      {/* ---- body and headstock, traced from a photograph ---------------- */}
+      {/* ---- the instrument, drawn from the artwork ---------------------- */}
       <g aria-hidden="true" transform={geo.artTransform}>
-        <Art part={geo.art.head} />
-        <Art part={geo.art.body} />
-        {geo.art.under.map((part, i) => (
-          <Art key={i} part={part} />
-        ))}
+        {geo.art.parts
+          .filter((part) => !part.over)
+          .map((part, i) => (
+            <Art key={i} part={part} />
+          ))}
       </g>
 
-      {/* ---- fretboard, frets and inlays, computed ----------------------- */}
-      <g aria-hidden="true">
-        <path
-          d={neckPath(geo)}
-          fill="url(#fl-board)"
-          stroke={darken(d.fretboardColor, 0.45)}
-          strokeWidth={2}
-        />
-        {/* Nut */}
-        <path
-          d={`M ${geo.nutX} ${CENTRE(geo, geo.nutX, -1) - 6} L ${geo.nutX} ${CENTRE(geo, geo.nutX, 1) + 6}`}
-          stroke="#efe7d6"
-          strokeWidth={9}
-          strokeLinecap="round"
-        />
-        {/* Fret wires: solid metal with a bright crown. A gradient cannot
-            paint these, because a vertical line has no bounding-box width. */}
-        {frets.slice(1).map((f) => {
-          const fx = geo.fretX(f);
-          const w = f < 6 ? 4.4 : f < 13 ? 3.8 : 3.2;
-          return (
-            <g key={f}>
-              <line x1={fx} y1={CENTRE(geo, fx, -1) - 2} x2={fx} y2={CENTRE(geo, fx, 1) + 2} stroke="#5e636b" strokeWidth={w} strokeLinecap="round" />
-              <line x1={fx - w * 0.22} y1={CENTRE(geo, fx, -1) - 2} x2={fx - w * 0.22} y2={CENTRE(geo, fx, 1) + 2} stroke="#e8ecf2" strokeWidth={w * 0.42} strokeLinecap="round" />
-            </g>
-          );
-        })}
-        {/* Position inlays */}
-        {frets.map((f) => {
-          const kind = inlayKind(f);
-          if (kind === 'none') return null;
-          const x = geo.noteX(f);
-          const half = geo.neckHalf(x);
-          const rad = geo.instrument.family === 'bass' ? 7.5 : 6.5;
-          return kind === 'double' ? (
-            <g key={`inlay${f}`}>
-              <circle cx={x} cy={geo.centreY - half * 0.56} r={rad} fill="#e8e2d4" opacity={0.8} />
-              <circle cx={x} cy={geo.centreY + half * 0.56} r={rad} fill="#e8e2d4" opacity={0.8} />
-            </g>
-          ) : (
-            <circle key={`inlay${f}`} cx={x} cy={geo.centreY} r={rad} fill="#e8e2d4" opacity={0.7} />
-          );
-        })}
-      </g>
-
-      {/* ---- tuners ------------------------------------------------------ */}
-      <g aria-hidden="true">
-        {geo.pegs.map((peg) => {
-          const target = props.tunerTargets?.find((t) => t.stringIndex === peg.stringIndex);
-          const state = target?.state ?? 'idle';
-          return (
-            <g key={peg.stringIndex}>
-              <line x1={peg.postX} y1={peg.postY} x2={peg.x} y2={peg.y} stroke="#8f98a4" strokeWidth={4} strokeLinecap="round" />
-              <circle cx={peg.postX} cy={peg.postY} r={geo.postR} fill="#b9c1cc" stroke="#767f8b" strokeWidth={1.2} />
-              <circle cx={peg.postX} cy={peg.postY} r={geo.postR * 0.38} fill="#6f7884" />
-              {state !== 'idle' && (
-                <circle cx={peg.x} cy={peg.y} r={geo.keySize[0] * 0.95} fill="none" stroke={state === 'in-tune' ? 'var(--ok)' : 'var(--accent)'} strokeWidth={3} opacity={0.9} />
-              )}
-              <ellipse cx={peg.x} cy={peg.y} rx={geo.keySize[0] * 0.5} ry={geo.keySize[1] * 0.5} fill={state === 'in-tune' ? 'var(--ok)' : '#ccd3dd'} stroke="#6f7884" strokeWidth={1.5} transform={`rotate(14 ${peg.x} ${peg.y})`} />
-            </g>
-          );
-        })}
-      </g>
+      {/* ---- tuners: the per-string indicator for tuner mode -------------- */}
+      {props.tunerTargets && (
+        <g aria-hidden="true">
+          {geo.pegs.map((peg) => {
+            const state =
+              props.tunerTargets?.find((t) => t.stringIndex === peg.stringIndex)?.state ?? 'idle';
+            if (state === 'idle') return null;
+            return (
+              <circle
+                key={peg.stringIndex}
+                cx={peg.x}
+                cy={peg.y}
+                r={peg.r}
+                fill="none"
+                stroke={state === 'in-tune' ? 'var(--ok)' : 'var(--accent)'}
+                strokeWidth={4}
+              />
+            );
+          })}
+        </g>
+      )}
 
       {/* ---- strings ----------------------------------------------------- */}
       <g aria-hidden="true">
         {strings.map((i) => {
-          const peg = geo.pegs[i];
+          const peg = geo.pegs[i] ?? { x: geo.nutX - 40, y: geo.stringY(i, geo.nutX) };
           const mutedInChord = mode === 'chord' && props.voicing?.frets[i] === null;
-          const pts = `${peg.postX},${peg.postY} ${geo.nutX},${geo.stringY(i, geo.nutX)} ${geo.bridgeX},${geo.stringY(i, geo.bridgeX)}`;
+          const pts = `${peg.x},${peg.y} ${geo.nutX},${geo.stringY(i, geo.nutX)} ${geo.bridgeX},${geo.stringY(i, geo.bridgeX)}`;
           return (
             <g key={i} opacity={mutedInChord ? 0.3 : 1}>
               <polyline points={pts} fill="none" stroke="#6d737c" strokeWidth={geo.stringWidth(i)} strokeLinecap="round" />
-              <polyline points={pts} fill="none" stroke="#e9edf3" strokeWidth={geo.stringWidth(i) * 0.45} strokeLinecap="round" />
-              {mutedInChord && <MutedMark x={geo.nutX - 30} y={geo.stringY(i, geo.nutX)} r={geo.noteRadius} />}
+              <polyline points={pts} fill="none" stroke="#eef1f6" strokeWidth={geo.stringWidth(i) * 0.4} strokeLinecap="round" />
+              {mutedInChord && <MutedMark x={geo.noteX(0)} y={geo.stringY(i, geo.nutX)} r={geo.noteRadius} />}
             </g>
           );
         })}
       </g>
 
       {/* ---- parts that sit over the strings ----------------------------- */}
-      {geo.art.over.length > 0 && (
-        <g aria-hidden="true" transform={geo.artTransform}>
-          {geo.art.over.map((part, i) => (
+      <g aria-hidden="true" transform={geo.artTransform}>
+        {geo.art.parts
+          .filter((part) => part.over)
+          .map((part, i) => (
             <Art key={i} part={part} />
           ))}
-        </g>
-      )}
+      </g>
 
       {/* ---- fret numbers ------------------------------------------------ */}
-      <g
-        aria-hidden="true"
-        fontFamily="var(--font-sans)"
-        fontSize={15}
-        fill="var(--text-muted)"
-      >
+      <g aria-hidden="true" fontFamily="var(--font-sans)" fontSize={16} fill="var(--text-muted)">
         {frets.map((f) => {
           // Only the frets that carry a position marker are numbered: those
           // are the ones players navigate by.
@@ -314,7 +258,7 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
             <text
               key={f}
               x={x}
-              y={geo.centreY + geo.neckHalf(x) + 30}
+              y={geo.centreY + geo.neckHalf(x) + 34}
               textAnchor="middle"
               fontWeight={f % 12 === 0 ? 700 : 500}
             >
@@ -361,10 +305,7 @@ export function InstrumentSVG(props: InstrumentSVGProps) {
 }
 
 
-const CENTRE = (geo: Geometry, x: number, sign: -1 | 1): number =>
-  geo.centreY + sign * geo.neckHalf(x);
-
-/** One traced artwork part. */
+/** One part of the instrument artwork. */
 function Art({ part }: { part: ArtPart }) {
   return (
     <path
@@ -373,22 +314,10 @@ function Art({ part }: { part: ArtPart }) {
       stroke={part.stroke}
       strokeWidth={part.sw}
       strokeLinejoin="round"
-      vectorEffect="non-scaling-stroke"
+      strokeLinecap="round"
+      opacity={part.opacity}
     />
   );
-}
-
-/** The fretboard, from the nut to a little past the last fret. */
-function neckPath(geo: Geometry): string {
-  const x0 = geo.nutX;
-  const x1 = geo.boardEndX;
-  return [
-    `M ${x0} ${CENTRE(geo, x0, -1) - 4}`,
-    `L ${x1} ${CENTRE(geo, x1, -1) - 5}`,
-    `L ${x1} ${CENTRE(geo, x1, 1) + 5}`,
-    `L ${x0} ${CENTRE(geo, x0, 1) + 4}`,
-    'Z',
-  ].join(' ');
 }
 
 /** An X over the nut end of a string: the universal "do not play" mark. */
@@ -524,32 +453,8 @@ const NoteCell = memo(function NoteCell({
   );
 });
 
-// ---- tiny colour helpers (no dependency needed for two operations) -------
 
-function clampByte(v: number): number {
-  return Math.max(0, Math.min(255, Math.round(v)));
-}
 
-function parseHex(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
-  return [
-    parseInt(full.slice(0, 2), 16),
-    parseInt(full.slice(2, 4), 16),
-    parseInt(full.slice(4, 6), 16),
-  ];
-}
 
-function toHex([r, g, b]: [number, number, number]): string {
-  return `#${[r, g, b].map((v) => clampByte(v).toString(16).padStart(2, '0')).join('')}`;
-}
 
-export function lighten(hex: string, amount: number): string {
-  const [r, g, b] = parseHex(hex);
-  return toHex([r + (255 - r) * amount, g + (255 - g) * amount, b + (255 - b) * amount]);
-}
 
-export function darken(hex: string, amount: number): string {
-  const [r, g, b] = parseHex(hex);
-  return toHex([r * (1 - amount), g * (1 - amount), b * (1 - amount)]);
-}

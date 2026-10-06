@@ -109,20 +109,6 @@ describe('every tuning preset recalculates the whole neck', () => {
     expect(dropB[1] - dropB[0]).toBe(7); // the dropped string sits a 5th below
   });
 
-  it('7-string standard adds a low B below the 6-string set', () => {
-    const g7 = openOf('guitar7', 'standard');
-    expect(g7).toHaveLength(7);
-    expect(midiToNote(g7[0]).full).toBe('B1');
-    expect(g7.slice(1)).toEqual(openOf('guitar6', 'standard'));
-    expect(stringNames(g7, 0, 5, 'B')).toEqual(['B', 'C', 'C#', 'D', 'D#', 'E']);
-  });
-
-  it('7-string Drop A keeps the other six strings in standard', () => {
-    const dropA = openOf('guitar7', 'drop-a');
-    expect(midiToNote(dropA[0]).full).toBe('A1');
-    expect(dropA.slice(1)).toEqual(openOf('guitar6', 'standard'));
-  });
-
   it('4-string bass standard: E A D G an octave below the guitar', () => {
     const bass = openOf('bass4', 'standard');
     expect(bass).toHaveLength(4);
@@ -131,12 +117,10 @@ describe('every tuning preset recalculates the whole neck', () => {
     expect(bass[0]).toBe(guitar[0] - 12);
   });
 
-  it('5-string bass standard adds a low B', () => {
-    const bass5 = openOf('bass5', 'standard');
-    expect(bass5).toHaveLength(5);
-    expect(bass5.map((m) => midiToNote(m).full)).toEqual(['B0', 'E1', 'A1', 'D2', 'G2']);
-    expect(bass5.slice(1)).toEqual(openOf('bass4', 'standard'));
-    expect(buildFretboard(bass5, 5)[0][0].freq).toBeCloseTo(30.8677, 3);
+  it('a bass tuned BEAD puts a low B on the lowest string', () => {
+    const bead = openOf('bass4', 'bead');
+    expect(bead.map((m) => midiToNote(m).full)).toEqual(['B0', 'E1', 'A1', 'D2']);
+    expect(buildFretboard(bead, 5)[0][0].freq).toBeCloseTo(30.8677, 3);
   });
 
   it('bass drop tunings move only the string they name', () => {
@@ -147,7 +131,7 @@ describe('every tuning preset recalculates the whole neck', () => {
   });
 
   it('every preset of every instrument has the right string count and ascends', () => {
-    for (const id of ['guitar6', 'guitar7', 'bass4', 'bass5']) {
+    for (const id of ['guitar6', 'bass4']) {
       const inst = getInstrument(id);
       for (const tuning of inst.tunings) {
         expect(tuning.notes).toHaveLength(inst.stringCount);

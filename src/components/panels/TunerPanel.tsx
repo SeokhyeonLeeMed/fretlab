@@ -27,6 +27,10 @@ export function TunerPanel({ visible }: { visible: boolean }) {
   const cents = reading?.cents ?? 0;
   const verdict = reading?.verdict ?? 'in-tune';
   const needle = needlePosition(cents);
+  // When a string is pinned and something else is being played, the needle
+  // would simply sit pegged at one end, which reads as a broken meter. Say
+  // what is happening instead.
+  const wrongString = pinned !== null && string !== null && Math.abs(string.cents) > 150;
 
   return (
     <div className={`tuner-overlay${visible ? ' is-visible' : ''}`} aria-hidden={!visible}>
@@ -69,6 +73,20 @@ export function TunerPanel({ visible }: { visible: boolean }) {
               </div>
             </div>
 
+            {pinned !== null && (
+              <p className="field-hint" style={{ margin: '0 0 8px' }}>
+                Listening for the <strong>{ctx.tuning.notes[pinned]}</strong> string only.{' '}
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  style={{ minHeight: 26, padding: '0 8px' }}
+                  onClick={() => setPinned(null)}
+                >
+                  Follow any string
+                </button>
+              </p>
+            )}
+
             <div
               className="tuner-meter"
               role="meter"
@@ -83,7 +101,7 @@ export function TunerPanel({ visible }: { visible: boolean }) {
             >
               <div className="tuner-meter-zone" />
               <div className="tuner-meter-centre" />
-              {reading && (
+              {reading && !wrongString && (
                 <div
                   className="tuner-needle"
                   data-verdict={verdict}
@@ -103,6 +121,10 @@ export function TunerPanel({ visible }: { visible: boolean }) {
             <div className="tuner-verdict" data-verdict={verdict} aria-live="polite">
               {!reading ? (
                 <span style={{ color: 'var(--text-muted)' }}>Play a single open string</span>
+              ) : wrongString ? (
+                <span style={{ color: 'var(--text-muted)' }}>
+                  That is {chromatic?.fullName}, not the {string?.targetName} string
+                </span>
               ) : verdict === 'in-tune' ? (
                 <>✓ In tune{string ? ` — ${string.targetName}` : ''}</>
               ) : verdict === 'flat' ? (
@@ -134,10 +156,10 @@ export function TunerPanel({ visible }: { visible: boolean }) {
                   aria-pressed={pinned === i}
                   data-state={string?.stringIndex === i ? string.verdict : undefined}
                   onClick={() => {
-                    setPinned(i);
+                    setPinned(pinned === i ? null : i);
                     playNote(ctx.openMidis[i], i);
                   }}
-                  title={`String ${ctx.instrument.stringCount - i}: ${note}. Click to pin it as the target and hear the reference pitch.`}
+                  title={`String ${ctx.instrument.stringCount - i}: ${note}. Plays the reference pitch, and pins the tuner to this string; click again to follow any string.`}
                 >
                   {note}
                 </button>

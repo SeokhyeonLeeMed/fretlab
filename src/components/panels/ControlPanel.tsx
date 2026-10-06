@@ -58,6 +58,7 @@ function InstrumentCard() {
         </div>
       </div>
 
+      {siblings.length > 1 && (
       <div className="field">
         <span className="field-label" id="strings-label">
           Strings
@@ -76,6 +77,7 @@ function InstrumentCard() {
           ))}
         </div>
       </div>
+      )}
 
       <p className="field-hint">
         {ctx.instrument.name} &middot; {ctx.instrument.stringCount} strings &middot;{' '}

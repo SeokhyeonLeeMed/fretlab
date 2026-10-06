@@ -10,18 +10,21 @@
 import { chromium } from 'playwright';
 
 const E2 = 440 * Math.pow(2, (40 - 69) / 12);
-const A2 = 110;
-const D3 = 440 * Math.pow(2, (50 - 69) / 12);
-const B0 = 440 * Math.pow(2, (23 - 69) / 12);
-
+const semis = (n) => Math.pow(2, n / 12);
+// Every open string of a 6-string guitar and a 4-string bass, plus a couple of
+// deliberately detuned ones and an alternate tuning.
 const cases = [
-  { name: 'open low E, in tune', freq: E2, instrument: null, tuning: null, note: 'E2', cents: 0 },
-  { name: 'open low E, 12 cents flat', freq: E2 * 2 ** (-12 / 1200), instrument: null, tuning: null, note: 'E2', cents: -12 },
-  { name: 'A string, 20 cents sharp', freq: A2 * 2 ** (20 / 1200), instrument: null, tuning: null, note: 'A2', cents: 20 },
-  { name: 'D string, in tune', freq: D3, instrument: null, tuning: null, note: 'D3', cents: 0 },
-  { name: 'Drop D: low string reads against D2', freq: (E2 / 2) * 2 ** (10 / 12) * 2 ** (-8 / 1200), instrument: null, tuning: 'drop-d', note: 'D2', cents: -8 },
-  { name: '5-string bass low B', freq: B0 * 2 ** (6 / 1200), instrument: ['Bass', '5-string'], tuning: null, note: 'B0', cents: 6 },
+  ...[['E2', 0], ['A2', 5], ['D3', 10], ['G3', 15], ['B3', 19], ['E4', 24]].map(([n, k]) => ({
+    name: `guitar open ${n}`, freq: E2 * semis(k), instrument: null, tuning: null, note: n, cents: 0,
+  })),
+  ...[['E1', -12], ['A1', -7], ['D2', -2], ['G2', 3]].map(([n, k]) => ({
+    name: `bass open ${n}`, freq: E2 * semis(k), instrument: ['Bass'], tuning: null, note: n, cents: 0,
+  })),
+  { name: 'guitar G3, 18 cents flat', freq: E2 * semis(15) * Math.pow(2, -18 / 1200), instrument: null, tuning: null, note: 'G3', cents: -18 },
+  { name: 'guitar B3, 25 cents sharp', freq: E2 * semis(19) * Math.pow(2, 25 / 1200), instrument: null, tuning: null, note: 'B3', cents: 25 },
+  { name: 'Drop D low string', freq: E2 * semis(-2), instrument: null, tuning: 'drop-d', note: 'D2', cents: 0 },
 ];
+
 
 const browser = await chromium.launch({
   channel: 'chrome',
@@ -63,10 +66,7 @@ for (const c of cases) {
   }, c.freq);
 
   await page.goto('http://localhost:4173/', { waitUntil: 'networkidle' });
-  if (c.instrument) {
-    await page.getByRole('button', { name: c.instrument[0], exact: true }).click();
-    await page.getByRole('button', { name: c.instrument[1] }).click();
-  }
+  if (c.instrument) await page.getByRole('button', { name: new RegExp(`^${c.instrument[0]}$`) }).click();
   if (c.tuning) await page.selectOption('select >> nth=0', c.tuning);
   await page.getByRole('button', { name: 'Tuner', exact: true }).click();
   await page.waitForTimeout(2200);
