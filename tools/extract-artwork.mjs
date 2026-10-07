@@ -274,9 +274,54 @@ for (const [family, src] of Object.entries(SOURCES)) {
   const K = 1000 / S;
   const frame = ([x, y], dx = 0, dy = 0) => [(x + dx - x0) * K, (y + dy - 0) * K];
 
-  // The drawing's neck centre line becomes y = 0.
-  const centreY = ((neckBox.minY + neckBox.maxY) / 2 + neckOff.dy);
-  const toFrame = ([x, y], dx, dy) => [(x + dx - x0) * K, (y + dy - centreY) * K];
+  // ---- level the drawing ---------------------------------------------------
+  // The drawings are a little tilted, each by its own amount, so the neck is
+  // not horizontal. Find the neck's axis -- a line through the middle of the
+  // fretboard, fitted along its length -- and rotate the whole drawing about
+  // the nut by that angle, so the axis becomes y = 0. Every part goes through
+  // the same transform, so the instrument turns as one piece. The angle is
+  // measured per instrument: the guitar and the bass are tilted differently.
+  const rawBoard = neckShapes
+    .map((sh) => ({ sh, b: bboxOf(sh.pts) }))
+    .sort((a, b2) => b2.b.maxX - b2.b.minX - (a.b.maxX - a.b.minX))[0]
+    .sh.pts.map(([x, y]) => [x + neckOff.dx, y + neckOff.dy]);
+  const rawBox = bboxOf(rawBoard);
+  const mids = [];
+  const SLICES = 40;
+  // The two ends are left out: the nut end and the rounded heel are not
+  // symmetric about the axis and would pull the fit.
+  for (let i = 3; i <= SLICES - 3; i++) {
+    const x = rawBox.minX + ((rawBox.maxX - rawBox.minX) * i) / SLICES;
+    const w = (rawBox.maxX - rawBox.minX) / SLICES;
+    const near = rawBoard.filter((pt) => Math.abs(pt[0] - x) <= w * 0.8);
+    if (near.length < 2) continue;
+    const ys = near.map((pt) => pt[1]);
+    mids.push([x, (Math.min(...ys) + Math.max(...ys)) / 2]);
+  }
+  const mN = mids.length;
+  const mSx = mids.reduce((a, m) => a + m[0], 0);
+  const mSy = mids.reduce((a, m) => a + m[1], 0);
+  const mSxx = mids.reduce((a, m) => a + m[0] * m[0], 0);
+  const mSxy = mids.reduce((a, m) => a + m[0] * m[1], 0);
+  const slope = (mN * mSxy - mSx * mSy) / (mN * mSxx - mSx * mSx);
+  const intercept = (mSy - slope * mSx) / mN;
+  const tilt = Math.atan(slope);
+  const cosT = Math.cos(tilt);
+  const sinT = Math.sin(tilt);
+  // Where the axis crosses the nut: the origin of the instrument frame.
+  const centreY = intercept + slope * x0;
+  console.log(
+    `  ${family}: neck tilted ${round((tilt * 180) / Math.PI, 3)} degrees ` +
+      `(${round(slope * (rawBox.maxX - rawBox.minX) * K, 2)} units over the fretboard); levelled`,
+  );
+  // The fret positions were measured along the drawing's x axis, which is the
+  // neck's axis foreshortened by cos(tilt); scaling by it keeps the scale
+  // length at exactly 1000 units along the levelled neck.
+  const toFrame = ([x, y], dx, dy) => {
+    const px = x + dx - x0;
+    const py = y + dy - centreY;
+    return [(px * cosT + py * sinT) * K * cosT, (-px * sinT + py * cosT) * K * cosT];
+  };
 
   // ---- assemble -----------------------------------------------------------
   const parts = [];

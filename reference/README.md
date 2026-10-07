@@ -40,3 +40,11 @@ Only the instrument is artwork. The strings, the note markers, the fret numbers
 and every musical decision are computed from the selected tuning, which is why
 they stay correct for any tuning. The drawn frets and inlays are used as they
 are, since the frame is fitted to them.
+
+## Levelling
+
+The drawings are a little tilted, each by its own amount (the guitar by 0.63
+degrees, the bass by 0.09). `tools/extract-artwork.mjs` fits a line through the
+middle of each fretboard and rotates the whole drawing about the nut by that
+angle, so the neck is horizontal in the application. The files here are left
+exactly as supplied; the rotation is applied when `artwork.ts` is generated.
