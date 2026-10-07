@@ -439,9 +439,9 @@ describe('the gate follows the room', () => {
 
   it('rises above a steady hum, and comes back down when it stops', () => {
     const gate = new NoiseGate();
-    steady(0.002, 96, gate);
+    steady(0.001, 96, gate);
     expect(gate.ready).toBe(true);
-    expect(gate.threshold).toBeCloseTo(0.006, 4);
+    expect(gate.threshold).toBeCloseTo(0.003, 4);
 
     steady(0.00005, 96, gate);
     expect(gate.threshold).toBe(NoiseGate.MIN_THRESHOLD);

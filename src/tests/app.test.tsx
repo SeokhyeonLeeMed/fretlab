@@ -815,3 +815,132 @@ describe('the language picker', () => {
     expect(saved.state.locale).toBe('es');
   });
 });
+
+describe('moving and zooming the instrument', () => {
+  const map = (): HTMLElement => screen.getByRole('slider', { name: 'Where you are on the instrument' });
+  const zoomSlider = (): HTMLInputElement => screen.getByRole('slider', { name: 'Zoom' }) as HTMLInputElement;
+
+  /** jsdom lays nothing out, so give the stage and the map real sizes. */
+  const sizeStage = (): HTMLElement => {
+    const scroller = document.querySelector('.stage-scroll') as HTMLElement;
+    Object.defineProperty(scroller, 'clientWidth', { value: 800, configurable: true });
+    let left = 0;
+    Object.defineProperty(scroller, 'scrollLeft', {
+      configurable: true,
+      get: () => left,
+      set: (v: number) => {
+        left = Math.max(0, v);
+      },
+    });
+    map().getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 400, height: 40, right: 400, bottom: 40, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+    return scroller;
+  };
+
+  /** jsdom has no PointerEvent, so a mouse event carries the coordinates. */
+  const pointer = (type: string, clientX: number): void => {
+    fireEvent(map(), new MouseEvent(type, { bubbles: true, cancelable: true, clientX }));
+  };
+
+  it('does not zoom on the wheel, with or without a modifier', () => {
+    render(<App />);
+    const before = useStore.getState().zoom;
+    const scroller = document.querySelector('.stage-scroll') as HTMLElement;
+    fireEvent.wheel(scroller, { deltaY: -120, ctrlKey: true });
+    fireEvent.wheel(scroller, { deltaY: -120 });
+    expect(useStore.getState().zoom).toBe(before);
+  });
+
+  it('zooms with the slider under the zoom buttons', () => {
+    render(<App />);
+    fireEvent.change(zoomSlider(), { target: { value: '1.5' } });
+    expect(useStore.getState().zoom).toBe(1.5);
+    expect(screen.getAllByText('150%').length).toBeGreaterThan(0);
+    // The slider sits in the same control as the buttons.
+    expect(zoomSlider().closest('.zoom-control')?.querySelector('button')).toBeTruthy();
+  });
+
+  it('moves along the neck when the box on the map is dragged', () => {
+    render(<App />);
+    // Zoomed right in, so the box covers a small part of the map.
+    fireEvent.change(zoomSlider(), { target: { value: '2.6' } });
+    const scroller = sizeStage();
+    scroller.scrollLeft = 0;
+    const box = document.querySelector('.neck-map-view') as HTMLElement;
+    expect(box).toBeTruthy();
+
+    // Press the map to the right of the box: the view jumps there.
+    pointer('pointerdown', 300);
+    const jumped = scroller.scrollLeft;
+    expect(jumped).toBeGreaterThan(0);
+    // Dragging left brings it back towards the headstock.
+    pointer('pointermove', 150);
+    expect(scroller.scrollLeft).toBeLessThan(jumped);
+    pointer('pointerup', 150);
+    const released = scroller.scrollLeft;
+    pointer('pointermove', 20);
+    expect(scroller.scrollLeft).toBe(released);
+  });
+
+  it('draws the neck alone, with every one of its 21 frets', () => {
+    render(<App />);
+    expect(map().querySelectorAll('.neck-map-fret')).toHaveLength(21);
+    expect(map().querySelectorAll('.neck-map-nut')).toHaveLength(1);
+    // No headstock and no body: the map is the neck.
+    expect(map().querySelector('.neck-map-body, .neck-map-head')).toBeNull();
+    chooseInstrument('Bass');
+    expect(map().querySelectorAll('.neck-map-fret')).toHaveLength(21);
+  });
+
+  it('moves along the neck from the keyboard', () => {
+    render(<App />);
+    const scroller = sizeStage();
+    fireEvent.keyDown(map(), { key: 'ArrowRight' });
+    expect(scroller.scrollLeft).toBeGreaterThan(0);
+    fireEvent.keyDown(map(), { key: 'Home' });
+    expect(scroller.scrollLeft).toBe(0);
+  });
+
+  it('parks the map while the tuner has the view', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Tuner' }));
+    expect(map().getAttribute('aria-disabled')).toBe('true');
+    expect(zoomSlider().disabled).toBe(true);
+  });
+});
+
+describe('on a narrow screen', () => {
+  const narrow = (on: boolean): void => {
+    window.matchMedia = ((query: string) => ({
+      matches: on,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia;
+  };
+
+  afterEach(() => {
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  });
+
+  it('puts the guitar / bass switch at the top of the page, once', () => {
+    narrow(true);
+    render(<App />);
+    const group = screen.getByRole('group', { name: 'Type' });
+    expect(group.closest('.family-bar')).toBeTruthy();
+    // Above the instrument, not below it.
+    const stage = document.getElementById('stage') as HTMLElement;
+    expect(group.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(within(group).getByRole('button', { name: 'Bass' }));
+    expect(screen.getByRole('group', { name: /4-string bass fretboard/i })).toBeTruthy();
+  });
+
+  it('keeps it in the instrument card on a wide one', () => {
+    narrow(false);
+    render(<App />);
+    const group = screen.getByRole('group', { name: 'Type' });
+    expect(group.closest('.family-bar')).toBeNull();
+    expect(group.closest('#instrument')).toBeTruthy();
+  });
+});

@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "texts": "vite-node tools/export-texts.ts",
     "report": "pandoc docs/report.md -o docs/FretLab-report.docx --toc --toc-depth=2 --resource-path=docs && pandoc docs/report.md -o docs/report.html --standalone --toc --toc-depth=2 --css=report.css --embed-resources --resource-path=docs && node tools/make-pdf.mjs"
   },
   "dependencies": {

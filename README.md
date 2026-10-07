@@ -180,7 +180,7 @@ src/
     index.ts                  lookup, the `useT` hook, language detection
 
   hooks/                      the React bindings for the engines
-  tests/                      269 tests
+  tests/                      277 tests
 ```
 
 **State versus derived data.** The store holds only choices — `"guitar6"`,
@@ -628,7 +628,7 @@ runs on defaults and says so.
 npm test
 ```
 
-**269 tests, all passing.** They cover the music-theory engine directly and the
+**277 tests, all passing.** They cover the music-theory engine directly and the
 application through its user interface.
 
 | Area | Tests | Examples of what is checked |
@@ -641,7 +641,7 @@ application through its user interface.
 | Audio (`audio.test.ts`) | 13 | rendered notes in tune within 5 cents across both instruments' full ranges and three sample rates; harmonic content (not a sine); decay; determinism |
 | Tuner (`tuner.test.ts`) | 34 | a string played softly, down to 1/500th of full strength and still accurate to a cent; a microphone with a DC offset; room noise and white noise still rejected at every level; the gate following the room, its warm-up, that a note cannot raise it, and its ceiling; the decibel signal meter; detection of every open string of every standard tuning; a 31 Hz low B; no octave errors; silence and noise rejected; cents deviation; targets following the current tuning |
 | Translations (`i18n.test.ts`) | 75 | every language covering every interface key, scale, chord, category and tuning id; nothing blank; every message English parameterises still parameterised elsewhere, and still substituting its arguments; no English prose left in the four CJK catalogues; browser-language detection, including `zh-TW`/`zh-HK`/`zh-MO` as Traditional and `zh-CN`/`zh-SG`/`zh` as Simplified |
-| Application (`app.test.tsx`) | 52 | both instruments; tuning changes recalculating the rendered neck; the custom-tuning editor; chord shapes recalculated per tuning; the Drop D one-finger power chord; down vs up strum ordering; muted strings silent; strum speed; microphone requested only in tuner mode and released on exit; view saved and restored; persistence; keyboard navigation |
+| Application (`app.test.tsx`) | 60 | the neck map drawing all 21 frets and moving the view by drag, press and keyboard; the wheel not zooming; the zoom slider; the guitar / bass switch moving to the top on a narrow screen; both instruments; tuning changes recalculating the rendered neck; the custom-tuning editor; chord shapes recalculated per tuning; the Drop D one-finger power chord; down vs up strum ordering; muted strings silent; strum speed; microphone requested only in tuner mode and released on exit; view saved and restored; persistence; keyboard navigation |
 
 ### Checks run in a real browser
 
@@ -657,7 +657,30 @@ node tools/tuner-check.mjs          # feeds the tuner a synthesised note
 node tools/catalogue.mjs            # regenerates the tables in section 12
 ```
 
-## 15.1 The project report
+## 15.1 All the text in one file
+
+```bash
+npm run texts
+```
+
+writes [docs/texts.md](docs/texts.md): every piece of text the application shows
+or speaks, organised by the part of the page it belongs to, with all six
+languages side by side and each placeholder named. It is the file to hand to a
+translator or a reviewer. It is generated — the catalogues in `src/i18n/` stay
+the source of truth — so edit the language file and run the command again.
+
+## 15.2 Getting around the instrument
+
+- **Move** along the neck with the small map of the neck above the instrument:
+  drag the box, press anywhere on the map, or focus it and use the arrow keys,
+  Home and End. Pushing the box against an end of the map carries on to the
+  headstock or the body.
+- **Zoom** with − and +, the slider under them, or a pinch on a touch screen.
+- **The mouse wheel** scrolls the page, and only up and down. It never zooms or
+  moves the instrument.
+- **On a narrow screen** the guitar / bass switch sits at the top of the page.
+
+## 15.3 The project report
 
 `docs/` holds a written report on the build, in Markdown, Word and PDF form.
 Regenerating it needs [pandoc](https://pandoc.org/) and Chrome:

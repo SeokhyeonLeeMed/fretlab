@@ -8,7 +8,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { Header } from './components/Header';
-import { ControlPanel } from './components/panels/ControlPanel';
+import { ControlPanel, FamilySwitch } from './components/panels/ControlPanel';
 import { InfoPanel } from './components/panels/InfoPanel';
 import { ChordPanel } from './components/panels/ChordPanel';
 import { AudioControls } from './components/panels/AudioControls';
@@ -23,6 +23,7 @@ import { useTunerLifecycle, useTunerReadings } from './hooks/useTuner';
 import { Notice } from './components/ui/controls';
 import { audioEngine } from './core/audio/AudioEngine';
 import { applyLocaleToDocument, useT } from './i18n';
+import { useNarrowLayout } from './hooks/useNarrowLayout';
 export function App() {
   const t = useT();
   const locale = useStore((s) => s.locale);
@@ -41,6 +42,7 @@ export function App() {
   const { pick, audioReady } = usePlayback();
   useTunerLifecycle();
   const { targets } = useTunerReadings();
+  const narrow = useNarrowLayout();
 
   // The theme is an attribute on <html> so the CSS custom properties cascade.
   useEffect(() => {
@@ -64,6 +66,13 @@ export function App() {
         {t('app.skipToFretboard')}
       </a>
       <Header />
+      {/* On a narrow screen the sidebar sits below the instrument, so the
+          switch between guitar and bass is lifted to the top of the page. */}
+      {narrow && (
+        <div className="family-bar">
+          <FamilySwitch />
+        </div>
+      )}
 
       <main className="app-main">
         <div className="sidebar" aria-label={t('stage.controls')}>
@@ -78,27 +87,43 @@ export function App() {
               overlay={<TunerPanel visible={mode === 'tuner'} />}
               toolbar={
                 <>
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    onClick={() => setZoom(zoom - 0.15)}
-                    disabled={mode === 'tuner' || zoom <= ZOOM_MIN}
-                    aria-label={t('stage.zoomOut')}
-                  >
-                    −
-                  </button>
-                  <span className="stage-hint" style={{ minWidth: 48, textAlign: 'center' }}>
-                    {Math.round(zoom * 100)}%
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    onClick={() => setZoom(zoom + 0.15)}
-                    disabled={mode === 'tuner' || zoom >= ZOOM_MAX}
-                    aria-label={t('stage.zoomIn')}
-                  >
-                    +
-                  </button>
+                  <div className="zoom-control">
+                    <div className="zoom-buttons">
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() => setZoom(zoom - 0.15)}
+                        disabled={mode === 'tuner' || zoom <= ZOOM_MIN}
+                        aria-label={t('stage.zoomOut')}
+                      >
+                        −
+                      </button>
+                      <span className="stage-hint" style={{ minWidth: 48, textAlign: 'center' }}>
+                        {Math.round(zoom * 100)}%
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() => setZoom(zoom + 0.15)}
+                        disabled={mode === 'tuner' || zoom >= ZOOM_MAX}
+                        aria-label={t('stage.zoomIn')}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <input
+                      type="range"
+                      className="zoom-slider"
+                      min={ZOOM_MIN}
+                      max={ZOOM_MAX}
+                      step={0.01}
+                      value={zoom}
+                      onChange={(e) => setZoom(Number(e.target.value))}
+                      disabled={mode === 'tuner'}
+                      aria-label={t('stage.zoom')}
+                      aria-valuetext={`${Math.round(zoom * 100)}%`}
+                    />
+                  </div>
                   <button
                     type="button"
                     className="btn btn-sm"

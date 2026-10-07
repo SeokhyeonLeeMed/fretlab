@@ -1,8 +1,10 @@
 /**
- * InstrumentStage.tsx — the viewport: scrolling, zooming and the tuner camera.
+ * InstrumentStage.tsx — the viewport: panning, zooming and the tuner camera.
  *
- * Normal mode is a plain horizontally scrollable area holding one wide SVG,
- * so native scrolling (and native momentum on a phone) just works.
+ * Normal mode is a window onto one wide SVG. The window does not scroll by
+ * wheel or swipe: those belong to the page, so scrolling over the instrument
+ * moves the page up and down and nothing else. Moving along the neck is done
+ * with the small map above it (NeckMap), and zooming with the toolbar.
  *
  * Tuner mode does not open a popup somewhere on the page. It applies a single
  * CSS transform to the whole instrument that translates and scales it so the
@@ -13,6 +15,8 @@
 
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Geometry } from './geometry';
+import { NeckMap, neckMapRange } from './NeckMap';
+import { useT } from '../../i18n';
 import { useStore } from '../../state/store';
 
 /** Height of the instrument at zoom 1, as a fraction of the stage width. */
@@ -37,6 +41,7 @@ export interface InstrumentStageProps {
 }
 
 export function InstrumentStage({ geo, children, overlay, toolbar }: InstrumentStageProps) {
+  const t = useT();
   const zoom = useStore((s) => s.zoom);
   const setZoom = useStore((s) => s.setZoom);
   const mode = useStore((s) => s.mode);
@@ -49,6 +54,11 @@ export function InstrumentStage({ geo, children, overlay, toolbar }: InstrumentS
   const [transform, setTransform] = useState<string | undefined>(undefined);
   const restoreTimer = useRef<number | null>(null);
   const wasTuner = useRef(false);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  /** Zoom and rendered width at the last layout, to keep the view centred on a zoom. */
+  const lastView = useRef<{ zoom: number; width: number } | null>(null);
+  /** An exact offset to apply at the next layout instead of re-centring. */
+  const pendingScroll = useRef<number | null>(null);
 
   // --- responsive sizing -------------------------------------------------
   useLayoutEffect(() => {
@@ -72,6 +82,35 @@ export function InstrumentStage({ geo, children, overlay, toolbar }: InstrumentS
   // The stage grows while the tuner is open so the camera has somewhere to
   // move to and the readout has somewhere to sit.
   const renderHeight = mode === 'tuner' ? Math.max(contentHeight, 400) : contentHeight;
+
+  // --- panning -----------------------------------------------------------
+  const panTo = useCallback((left: number): void => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollLeft = left;
+    setScrollLeft(el.scrollLeft);
+  }, []);
+
+  // Zooming keeps whatever was in the middle of the view in the middle. The
+  // offset is in pixels, so without this a zoom would slide the neck sideways
+  // under the reader and the map's box would jump. Only a zoom does this: a
+  // resize of the window changes the width too, and must leave the view where
+  // it is.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    const before = lastView.current;
+    lastView.current = { zoom, width: renderWidth };
+    if (!el) return;
+    if (pendingScroll.current !== null) {
+      panTo(pendingScroll.current);
+      pendingScroll.current = null;
+    } else if (before && before.zoom !== zoom && before.width > 0) {
+      const centre = (el.scrollLeft + el.clientWidth / 2) / before.width;
+      panTo(centre * renderWidth - el.clientWidth / 2);
+    } else {
+      setScrollLeft(el.scrollLeft);
+    }
+  }, [zoom, renderWidth, stageWidth, panTo]);
 
   // --- the tuner camera --------------------------------------------------
   useEffect(() => {
@@ -125,8 +164,10 @@ export function InstrumentStage({ geo, children, overlay, toolbar }: InstrumentS
       restoreTimer.current = window.setTimeout(() => {
         restoreTimer.current = null;
         if (saved) {
+          // Applied at the next layout, once the width matches the zoom again.
+          if (saved.zoom !== useStore.getState().zoom) pendingScroll.current = saved.scrollLeft;
           setZoom(saved.zoom);
-          if (scrollRef.current) scrollRef.current.scrollLeft = saved.scrollLeft;
+          panTo(saved.scrollLeft);
         }
         clearViewBeforeTuner();
       }, CAMERA_MS);
@@ -143,6 +184,7 @@ export function InstrumentStage({ geo, children, overlay, toolbar }: InstrumentS
     saveViewBeforeTuner,
     clearViewBeforeTuner,
     setZoom,
+    panTo,
   ]);
 
   useEffect(
@@ -152,7 +194,8 @@ export function InstrumentStage({ geo, children, overlay, toolbar }: InstrumentS
     [],
   );
 
-  // --- pinch and ctrl+wheel zoom ----------------------------------------
+  // --- pinch zoom --------------------------------------------------------
+  // There is deliberately no wheel handler: the wheel scrolls the page.
   const pinch = useRef<{ distance: number; zoom: number } | null>(null);
 
   const onTouchStart = useCallback(
@@ -178,27 +221,45 @@ export function InstrumentStage({ geo, children, overlay, toolbar }: InstrumentS
     pinch.current = null;
   }, []);
 
-  const onWheel = useCallback(
-    (e: React.WheelEvent) => {
-      // Only with a modifier, so ordinary scrolling still scrolls.
-      if (!e.ctrlKey && !e.metaKey) return;
-      e.preventDefault();
-      setZoom(zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08));
-    },
-    [setZoom, zoom],
-  );
+  // What the stage is showing, in the instrument's own units, for the map.
+  const viewX0 = pxScale > 0 ? scrollLeft / pxScale : 0;
+  const viewX1 = pxScale > 0 ? (scrollLeft + stageWidth) / pxScale : geo.width;
+  const maxScroll = Math.max(0, renderWidth - stageWidth);
+  const map = neckMapRange(geo);
+
+  /**
+   * The map only covers the neck. Pushing the box against either end of it
+   * carries the view all the way to that end of the instrument, so the
+   * headstock and the body stay reachable.
+   */
+  const moveView = (x0: number): void => {
+    const width = viewX1 - viewX0;
+    if (x0 <= map.x0) panTo(0);
+    else if (x0 + width >= map.x1) panTo(maxScroll);
+    else panTo(x0 * pxScale);
+  };
 
   return (
     <div className="stage">
+      <NeckMap
+        geo={geo}
+        viewX0={viewX0}
+        viewX1={viewX1}
+        onMove={moveView}
+        percent={maxScroll > 0 ? (scrollLeft / maxScroll) * 100 : 0}
+        disabled={mode === 'tuner'}
+        label={t('stage.map')}
+        help={t('stage.map.help')}
+      />
       <div className="stage-viewport">
       <div
         className={`stage-scroll${mode === 'tuner' ? ' is-locked' : ''}`}
         ref={scrollRef}
-        style={{ height: renderHeight, touchAction: mode === 'tuner' ? 'none' : 'pan-x pan-y' }}
+        style={{ height: renderHeight, touchAction: mode === 'tuner' ? 'none' : 'pan-y' }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        onWheel={onWheel}
+        onScroll={(e) => setScrollLeft(e.currentTarget.scrollLeft)}
       >
         <div
           className="stage-camera"

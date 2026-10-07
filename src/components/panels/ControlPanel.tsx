@@ -25,6 +25,7 @@ import {
   useT,
 } from '../../i18n';
 import type { TFunction } from '../../i18n';
+import { useNarrowLayout } from '../../hooks/useNarrowLayout';
 
 /** The instrument's own name, which lives in the message catalogue. */
 function instrumentName(t: TFunction, id: string): string {
@@ -45,34 +46,49 @@ export function ControlPanel() {
   );
 }
 
+/**
+ * Guitar or bass. Its own component because it is shown in one of two places:
+ * in the instrument card on a wide screen, and at the very top of the page on
+ * a narrow one, where the card has dropped below the instrument.
+ */
+export function FamilySwitch() {
+  const t = useT();
+  const setFamily = useStore((s) => s.setFamily);
+  const family = useMusicContext().instrument.family;
+
+  return (
+    <div className="field">
+      <span className="field-label" id="family-label">
+        {t('instrument.type')}
+      </span>
+      <div className="segmented" role="group" aria-labelledby="family-label">
+        {FAMILIES.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            aria-pressed={f.id === family}
+            onClick={() => setFamily(f.id)}
+          >
+            {t(f.id === 'guitar' ? 'family.guitar' : 'family.bass')}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function InstrumentCard() {
   const t = useT();
   const instrumentId = useStore((s) => s.instrumentId);
   const setInstrument = useStore((s) => s.setInstrument);
-  const setFamily = useStore((s) => s.setFamily);
   const ctx = useMusicContext();
   const family = ctx.instrument.family;
   const siblings = instrumentsOfFamily(family);
+  const narrow = useNarrowLayout();
 
   return (
     <Card title={t('instrument.title')} id="instrument">
-      <div className="field">
-        <span className="field-label" id="family-label">
-          {t('instrument.type')}
-        </span>
-        <div className="segmented" role="group" aria-labelledby="family-label">
-          {FAMILIES.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              aria-pressed={f.id === family}
-              onClick={() => setFamily(f.id)}
-            >
-              {t(f.id === 'guitar' ? 'family.guitar' : 'family.bass')}
-            </button>
-          ))}
-        </div>
-      </div>
+      {!narrow && <FamilySwitch />}
 
       {siblings.length > 1 && (
       <div className="field">

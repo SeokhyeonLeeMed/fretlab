@@ -183,12 +183,15 @@ export const es: Messages = {
   'stage.controls': 'Controles',
   'stage.zoomOut': 'Alejar',
   'stage.zoomIn': 'Acercar',
+  'stage.zoom': 'Zoom',
+  'stage.map': 'Qué parte del instrumento se ve',
+  'stage.map.help': 'Arrastra el recuadro, o usa las flechas, para recorrer el instrumento',
   'stage.reset': 'Restablecer',
   'stage.reset.help': 'Volver al 100%',
   'stage.whole': 'Instrumento completo',
   'stage.whole.help': 'Alejar hasta ver el instrumento entero',
   'stage.hint':
-    'Desplaza en horizontal para recorrer el mástil · pellizca o Ctrl+rueda para el zoom · pulsa una posición para oírla',
+    'Arrastra el recuadro del mástil pequeño para recorrer el instrumento · usa el control deslizante para el zoom · pulsa una posición para oírla',
   'stage.hint.tuner':
     'Modo afinador: la vista queda fijada en la pala. Al cerrarlo se restauran tu posición y zoom anteriores.',
   'fretboard.label': ({ instrument }) => `Diapasón de ${instrument}`,

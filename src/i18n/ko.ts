@@ -178,12 +178,15 @@ export const ko: Messages = {
   'stage.controls': '설정',
   'stage.zoomOut': '축소',
   'stage.zoomIn': '확대',
+  'stage.zoom': '확대',
+  'stage.map': '악기에서 보고 있는 위치',
+  'stage.map.help': '상자를 끌거나 방향키를 눌러 악기를 따라 이동합니다',
   'stage.reset': '기본 크기',
   'stage.reset.help': '100%로 되돌리기',
   'stage.whole': '악기 전체',
   'stage.whole.help': '악기 전체가 보이도록 축소합니다',
   'stage.hint':
-    '옆으로 스크롤해 넥을 따라 이동 · 두 손가락이나 Ctrl+스크롤로 확대 · 위치를 누르면 소리가 납니다',
+    '작은 넥 위의 상자를 끌어 악기를 따라 이동 · 슬라이더로 확대 · 위치를 누르면 소리가 납니다',
   'stage.hint.tuner': '튜너 모드: 화면이 헤드에 머뭅니다. 닫으면 이전 위치와 배율로 돌아갑니다.',
   'fretboard.label': ({ instrument }) => `${instrument} 지판`,
   'fretboard.grid': ({ note }) =>

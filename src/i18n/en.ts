@@ -233,12 +233,15 @@ export const en = {
   'stage.controls': 'Controls',
   'stage.zoomOut': 'Zoom out',
   'stage.zoomIn': 'Zoom in',
+  'stage.zoom': 'Zoom',
+  'stage.map': 'Where you are on the instrument',
+  'stage.map.help': 'Drag the box, or use the arrow keys, to move along the instrument',
   'stage.reset': 'Reset',
   'stage.reset.help': 'Back to 100%',
   'stage.whole': 'Whole instrument',
   'stage.whole.help': 'Zoom out to show the whole instrument',
   'stage.hint':
-    'Scroll sideways to move along the neck · pinch or Ctrl+scroll to zoom · click a position to hear it',
+    'Drag the box on the small neck to move along the instrument · use the slider to zoom · click a position to hear it',
   'stage.hint.tuner':
     'Tuner mode: the view is parked on the headstock. Closing it restores your previous position and zoom.',
   'fretboard.label': ({ instrument }: { instrument: string }) => `${instrument} fretboard`,

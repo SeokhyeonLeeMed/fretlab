@@ -178,12 +178,15 @@ export const ja: Messages = {
   'stage.controls': '設定',
   'stage.zoomOut': '縮小',
   'stage.zoomIn': '拡大',
+  'stage.zoom': '拡大',
+  'stage.map': '楽器のどこを表示しているか',
+  'stage.map.help': '枠をドラッグするか矢印キーで、楽器に沿って移動します',
   'stage.reset': '等倍',
   'stage.reset.help': '100% に戻す',
   'stage.whole': '楽器全体',
   'stage.whole.help': '楽器全体が見えるように縮小します',
   'stage.hint':
-    '横スクロールでネックを移動 · ピンチまたは Ctrl+スクロールで拡大 · 位置を押すと音が鳴ります',
+    '小さなネックの枠をドラッグして移動 · スライダーで拡大 · 位置を押すと音が鳴ります',
   'stage.hint.tuner':
     'チューナーモード: 表示がヘッドに固定されます。閉じると元の位置と倍率に戻ります。',
   'fretboard.label': ({ instrument }) => `${instrument}の指板`,

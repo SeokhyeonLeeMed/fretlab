@@ -22,7 +22,7 @@ domain.
 | **Audio** | Karplus–Strong plucked-string synthesis, Web Audio API, no samples |
 | **Tuner** | Microphone pitch detection, accurate to about one cent |
 | **Languages** | English, 한국어, 日本語, 简体中文, 繁體中文, Español |
-| **Tests** | 269, all passing |
+| **Tests** | 277, all passing |
 | **Production bundle** | 393 kB JavaScript (131 kB gzipped), 16 kB CSS |
 | **Deployment** | GitHub Pages workflow included; Cloudflare, Netlify, Vercel configs included |
 | **Cost to run** | Nothing. No backend, no account, no domain. |
@@ -40,6 +40,25 @@ tunings correct rather than approximately correct.
 # 2. What was built
 
 ## 2.0 Revisions
+
+### Revision 7
+
+- **Moving along the neck is done on a small map of the neck** above the
+  stage: the nut, all 21 frets and the position dots, and nothing else, drawn
+  to the neck's real proportions and taper. A
+  semi-transparent box marks the part being shown; dragging it, pressing the
+  map, or the arrow keys move the view. The map is drawn from the same geometry
+  as the instrument, so the box covers exactly the frets on show, and pushing
+  it against either end carries the view on to the headstock or the body.
+- **The wheel no longer zooms or pans.** Scrolling over the instrument scrolls
+  the page up and down and does nothing else. Zooming is the − and + buttons
+  and a slider directly beneath them, and a zoom now keeps the middle of the
+  view in the middle instead of sliding the neck sideways.
+- **On a narrow screen the guitar / bass switch is at the top of the page**,
+  above the instrument it changes, rather than in a card below it.
+- **Every piece of text is collected in `docs/texts.md`**, organised by where it
+  appears, with all six languages side by side and the placeholders named. It
+  is generated from the catalogues by `npm run texts`.
 
 ### Revision 6
 
@@ -152,9 +171,11 @@ two unrelated pictures. Fret spacing uses the real equal-tempered rule
 (`1 − 2^(−fret/12)`), so the neck narrows the way a neck does and the 12th fret
 falls exactly halfway to the bridge.
 
-The view scrolls horizontally, zooms with buttons, with pinch gestures on a
-touch screen and with Ctrl+scroll, and has a "Whole instrument" control that
-zooms out to show the complete guitar or bass including the body.
+The view is moved with a small map of the neck above it: a box marks the
+part on show and is dragged along the neck. It zooms with buttons, a slider
+beneath them and pinch gestures on a touch screen, and has a "Whole instrument"
+control that zooms out to show the complete guitar or bass including the body.
+The mouse wheel is left to the page, so it only ever scrolls up and down.
 
 ![The "Whole instrument" view, showing the body, pickups, bridge and controls generated from the same geometry as the neck.](images/01b-whole-instrument.png)
 
@@ -592,10 +613,11 @@ display survives greyscale and colour-blindness.
 ## 8.2 Responsive design
 
 The layout moves to a single column below 1080 px, with the instrument placed
-first because it is the point of the page. The fretboard stays horizontally
-scrollable, pinch-to-zoom works, and controls keep a 42 px minimum touch target.
+first because it is the point of the page and the guitar / bass switch lifted
+above it. The neck is moved by dragging the box on the map, pinch-to-zoom works,
+and controls keep a 42 px minimum touch target.
 
-![On a phone: the instrument comes first, the neck scrolls, and the controls stay large enough to use.](images/08-mobile.png){width=2.4in}
+![On a phone: the guitar / bass switch and the instrument come first, and the map above the neck moves the view.](images/08-mobile.png){width=2.4in}
 
 ## 8.3 Accessibility
 
@@ -698,7 +720,7 @@ sets the document language, and survives a reload.
 
 # 9. Testing results
 
-`npm test` — **269 tests, 9 files, all passing** in about a minute.
+`npm test` — **277 tests, 9 files, all passing** in about a minute.
 
 | Area | Tests | What is checked |
 | --- | --- | --- |
@@ -710,7 +732,7 @@ sets the document language, and survives a reload.
 | Audio | 13 | rendered notes in tune within 5 cents across both instruments' ranges and three sample rates; harmonic content; decay; determinism |
 | Tuner | 34 | a string played softly, down to 1/500th of full strength, and still to a cent; a DC-offset microphone; room noise and white noise still rejected at every level; the gate following the room, warming up, not being raised by a note, and its ceiling; the decibel signal meter; every open string of every standard tuning; a 31 Hz low B; no octave errors; silence and noise rejected; cents; targets following the current tuning |
 | Translations | 75 | every language covering every interface key, scale, chord, category and tuning; no blank values; parameterised messages still parameterised and still substituting; no English left in the CJK catalogues; browser-language detection, including the Chinese variants |
-| Application | 52 | both instruments; tuning changes recalculating the rendered neck; the custom-tuning editor; chord shapes per tuning; the Drop D one-finger power chord; down vs up strum ordering; muted strings silent; strum speed; microphone requested only in tuner mode and released on exit; view saved and restored; persistence; keyboard navigation |
+| Application | 60 | the map showing the neck alone with all 21 frets, and moving the view by drag, press and keyboard; the wheel not zooming; the zoom slider; the guitar / bass switch moving to the top on a narrow screen; both instruments; tuning changes recalculating the rendered neck; the custom-tuning editor; chord shapes per tuning; the Drop D one-finger power chord; down vs up strum ordering; muted strings silent; strum speed; microphone requested only in tuner mode and released on exit; view saved and restored; persistence; keyboard navigation |
 
 The application tests render the real application in jsdom and drive it the way
 a visitor would, rather than testing a stub.

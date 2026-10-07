@@ -624,12 +624,11 @@ input[type='range']::-moz-range-thumb {
   position: relative;
 }
 
+/* A window, not a scroller: hidden overflow can still be moved from script,
+   which is how the map pans it, but a wheel or a swipe over the instrument
+   goes to the page and scrolls it vertically. */
 .stage-scroll {
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
-  scrollbar-width: thin;
+  overflow: hidden;
 }
 .stage-scroll.is-locked {
   overflow: hidden;
@@ -640,6 +639,93 @@ input[type='range']::-moz-range-thumb {
   transform-origin: 0 0;
   transition: transform var(--camera-transition);
   will-change: transform;
+}
+
+/* The small map of the neck above the stage. */
+.neck-map {
+  position: relative;
+  /* The height follows from the neck's own proportions; see NeckMap. */
+  width: min(340px, calc(100% - 2 * var(--space-3)));
+  margin: var(--space-2) auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-sunken);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+/* Small to look at, but still a finger's height to take hold of. */
+.neck-map::before {
+  content: '';
+  position: absolute;
+  inset: -10px 0;
+}
+.neck-map:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.neck-map.is-disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.neck-map svg {
+  display: block;
+}
+.neck-map-board {
+  fill: color-mix(in srgb, var(--text) 30%, var(--bg-sunken));
+}
+.neck-map-fret {
+  stroke: color-mix(in srgb, var(--text) 55%, transparent);
+  stroke-width: 1;
+}
+.neck-map-nut {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+.neck-map-dot {
+  fill: var(--text);
+  opacity: 0.9;
+}
+/* The part of the instrument the stage is showing. */
+.neck-map-view {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  border: 1.5px solid var(--accent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  pointer-events: none;
+}
+.neck-map:active .neck-map-view {
+  background: color-mix(in srgb, var(--accent) 34%, transparent);
+}
+
+/* Guitar or bass, at the top of the page on a narrow screen. */
+.family-bar {
+  padding: var(--space-2) var(--space-4) 0;
+}
+.family-bar .field {
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .family-bar {
+    padding: var(--space-2) var(--space-2) 0;
+  }
+}
+
+.zoom-control {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.zoom-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.zoom-slider {
+  height: 20px;
 }
 
 .stage-toolbar {
