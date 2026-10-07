@@ -311,7 +311,7 @@ for (const [family, src] of Object.entries(SOURCES)) {
   // Where the axis crosses the nut: the origin of the instrument frame.
   const centreY = intercept + slope * x0;
   console.log(
-    `  ${family}: neck tilted ${round((tilt * 180) / Math.PI, 3)} degrees ` +
+    `  ${family}: neck tilted ${round((tilt * 180) / Math.PI, 5)} degrees ` +
       `(${round(slope * (rawBox.maxX - rawBox.minX) * K, 2)} units over the fretboard); levelled`,
   );
   // The fret positions were measured along the drawing's x axis, which is the
@@ -325,27 +325,11 @@ for (const [family, src] of Object.entries(SOURCES)) {
 
   // ---- assemble -----------------------------------------------------------
   const parts = [];
-  // The drawings are laid out with the bass side downwards, which is how
-  // FretLab reads a fretboard, but that leaves the headstock logo upside
-  // down. Turning just the logo back the right way up keeps everything else
-  // exactly as drawn.
-  const logoFill = 'rgb(35, 24, 21)';
-  const logoBox = (() => {
-    const head = collected.find((c) => c.role === 'head');
-    if (!head) return null;
-    const glyphs = head.shapes.filter((sh) => sh.fill === logoFill);
-    if (glyphs.length < 3) return null;
-    const b = bboxOf(glyphs.flatMap((sh) => sh.pts));
-    return { cx: (b.minX + b.maxX) / 2, cy: (b.minY + b.maxY) / 2 };
-  })();
-
+  // Every shape is used exactly as drawn, the headstock logo included: it is
+  // upside down in the drawings on purpose.
   for (const c of collected) {
     for (const s of c.shapes) {
-      const isLogo = c.role === 'head' && logoBox && s.fill === logoFill;
-      const src2 = isLogo
-        ? s.pts.map(([x, y]) => [2 * logoBox.cx - x, 2 * logoBox.cy - y])
-        : s.pts;
-      let pts = src2.map((p) => toFrame(p, c.dx, c.dy));
+      let pts = s.pts.map((p) => toFrame(p, c.dx, c.dy));
       pts = rdp(pts, 0.35);
       if (pts.length < 2) continue;
       parts.push({

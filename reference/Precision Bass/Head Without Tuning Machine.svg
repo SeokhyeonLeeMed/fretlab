@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg id="_레이어_2" data-name="레이어 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 78.02 34.62">
+<svg id="_레이어_2" data-name="레이어 2" xmlns="http://www.w3.org/2000/svg" viewBox="0.009 -0.047 78.022 34.714">
+  <g data-levelled="0.08936" transform="rotate(0.08936 39.01 17.31)">
   <defs>
     <style>
       .cls-1 {
@@ -36,4 +37,5 @@
       <path class="cls-1" d="M74.4,16.78l-2.12.68,2.12.68c.27.11.58.19.94.19.87,0,1.57-.39,1.57-.87s-.7-.87-1.57-.87c-.36,0-.68.08-.94.19Z"/>
     </g>
   </g>
+</g>
 </svg>

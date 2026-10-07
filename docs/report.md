@@ -50,12 +50,15 @@ tunings correct rather than approximately correct.
   map, or the arrow keys move the view. The map is drawn from the same geometry
   as the instrument, so the box covers exactly the frets on show, and pushing
   it against either end carries the view on to the headstock or the body.
-- **The instrument drawings are levelled.** The supplied drawings are each
+- **The instrument drawings are levelled.** The supplied drawings were each
   slightly tilted, so the neck ran downhill: by 0.63° on the guitar, about
-  seven units from nut to body, and by 0.09° on the bass. The extractor now fits
-  a line through the middle of each fretboard and rotates that whole drawing
-  about its nut by its own angle, every part through the same transform. The
-  neck's centre line is flat to within 0.02 of a unit on both instruments.
+  seven units from nut to body, and by 0.09° on the bass. Every SVG in each
+  instrument's folder — the whole drawing and each part — has been turned by
+  that instrument's own angle, by wrapping its contents in a single rotation
+  rather than rewriting them, so the parts still fit together exactly. The
+  necks now measure level to a thousandth of a degree.
+- **The headstock logo is as drawn.** An earlier version turned it the right
+  way up; it is upside down in the drawings on purpose, and is left that way.
 - **The wheel no longer zooms or pans.** Scrolling over the instrument scrolls
   the page up and down and does nothing else. Zooming is the − and + buttons
   and a slider directly beneath them, and a zoom now keeps the middle of the

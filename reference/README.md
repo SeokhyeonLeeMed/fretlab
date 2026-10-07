@@ -14,7 +14,7 @@ part — body, pickguard, bridge, head, neck, frets, tuning machine and so on.
 ## How they become artwork
 
 `node tools/extract-artwork.mjs` regenerates
-`src/components/fretboard/artwork.ts` from these files. It does three things.
+`src/components/fretboard/artwork.ts` from these files. It does two things.
 
 **It puts the parts back in one coordinate system.** Each part file is cropped
 to its own bounds, so its position within the whole drawing is lost. A shape's
@@ -30,9 +30,8 @@ than one part in a thousand of the scale length. Everything is then
 re-expressed with the nut at the origin and the scale length exactly 1000
 units, so FretLab's computed fret positions land on the drawn frets.
 
-**It corrects the headstock logo.** The drawings are laid out with the bass side
-downwards, which is how FretLab reads a fretboard but leaves the logo upside
-down; the logo glyphs alone are turned back the right way up.
+Every shape is used exactly as drawn. That includes the headstock logo, which
+is upside down in the drawings on purpose and is left that way.
 
 ## What FretLab draws itself
 
@@ -43,8 +42,15 @@ are, since the frame is fitted to them.
 
 ## Levelling
 
-The drawings are a little tilted, each by its own amount (the guitar by 0.63
-degrees, the bass by 0.09). `tools/extract-artwork.mjs` fits a line through the
-middle of each fretboard and rotates the whole drawing about the nut by that
-angle, so the neck is horizontal in the application. The files here are left
-exactly as supplied; the rotation is applied when `artwork.ts` is generated.
+The drawings as supplied were a little tilted, each by its own amount: the
+guitar by 0.634 degrees and the bass by 0.089. `node tools/level-reference.mjs`
+turned every file in each folder -- the whole instrument and each part -- by
+that instrument's angle, so the files here are level. Nothing inside a drawing
+was rewritten: its contents are wrapped in one `<g transform="rotate(...)">`,
+marked `data-levelled`, and the viewBox widened just enough to hold the turned
+artwork. Removing that group and restoring the old viewBox gives back the file
+as supplied.
+
+`tools/extract-artwork.mjs` still measures the neck's axis and corrects any
+tilt that remains, so a new drawing added later is levelled the same way. On
+these files it now measures less than a thousandth of a degree.
