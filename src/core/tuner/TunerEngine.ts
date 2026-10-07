@@ -7,7 +7,7 @@
  * mode.
  */
 
-import { detectPitch, PitchSmoother, rmsOf, type PitchResult } from './pitchDetect';
+import { detectPitch, NoiseGate, PitchSmoother, rmsOf, type PitchResult } from './pitchDetect';
 
 export type TunerState =
   | 'idle'
@@ -24,14 +24,30 @@ export interface TunerSnapshot {
   error: string | null;
   /** Latest accepted reading, or null while nothing is being played. */
   pitch: PitchResult | null;
-  /** Input level 0..1, for the signal meter. */
+  /** Input level 0..1, for the signal meter. Decibels, not amplitude. */
   level: number;
+}
+
+/**
+ * Frame level as a 0..1 meter reading.
+ *
+ * Amplitude is the wrong scale for this: a string played softly sits around
+ * a hundredth of full scale, so a linear meter leaves it pinned at nothing
+ * while the tuner is in fact hearing it perfectly well. Decibels put the
+ * quiet end of the range where it can be seen.
+ */
+export function meterLevel(rms: number): number {
+  if (!(rms > 0)) return 0;
+  const db = 20 * Math.log10(rms); // -inf..0
+  return Math.min(1, Math.max(0, (db + 72) / 72));
 }
 
 type Listener = (s: TunerSnapshot) => void;
 
-const FRAME_SIZE = 8192; // ~170 ms at 48 kHz: enough periods for a low B0
+const FRAME_SIZE = 8192; // ~170 ms at 48 kHz: enough periods for a 31 Hz B0
 const UPDATE_HZ = 24;
+/** How long a reading stays on screen after the string falls below the gate. */
+const HOLD_FRAMES = UPDATE_HZ; // one second
 
 export class TunerEngine {
   private state: TunerState = 'idle';
@@ -47,6 +63,7 @@ export class TunerEngine {
   private frame: Float32Array<ArrayBuffer> | null = null;
   private timer: number | null = null;
   private smoother = new PitchSmoother(5);
+  private gate = new NoiseGate();
   private quietFrames = 0;
   private listeners = new Set<Listener>();
 
@@ -154,6 +171,7 @@ export class TunerEngine {
       this.frame = new Float32Array(this.analyser.fftSize);
 
       this.smoother.reset();
+      this.gate.reset();
       this.state = 'running';
       this.error = null;
       this.emit();
@@ -169,11 +187,15 @@ export class TunerEngine {
   private loop = (): void => {
     if (this.state !== 'running' || !this.analyser || !this.frame || !this.ctx) return;
     this.analyser.getFloatTimeDomainData(this.frame);
-    this.level = Math.min(1, rmsOf(this.frame) * 12);
+    const rms = rmsOf(this.frame);
+    this.level = meterLevel(rms);
+    // The gate is set from the room before this frame is judged against it.
+    this.gate.update(rms);
 
     const result = detectPitch(this.frame, this.ctx.sampleRate, {
       minFreq: this.minFreq,
       maxFreq: this.maxFreq,
+      rmsThreshold: this.gate.threshold,
     });
 
     if (result) {
@@ -182,9 +204,11 @@ export class TunerEngine {
       this.pitch = { ...result, freq: smoothed };
     } else {
       this.quietFrames++;
-      // Hold the last reading briefly so a decaying string does not make the
-      // display flicker between a note and "listening".
-      if (this.quietFrames > 12) {
+      // Hold the last reading so a decaying string does not make the display
+      // flicker between a note and "listening". A second, because a string
+      // played softly is only above the floor for a fraction of that, and a
+      // reading that vanishes before it can be read is no use for tuning.
+      if (this.quietFrames > HOLD_FRAMES) {
         this.pitch = null;
         this.smoother.reset();
       }
@@ -220,6 +244,7 @@ export class TunerEngine {
   stop(): void {
     this.releaseMedia();
     this.smoother.reset();
+    this.gate.reset();
     this.pitch = null;
     this.level = 0;
     this.quietFrames = 0;

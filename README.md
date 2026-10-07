@@ -180,7 +180,7 @@ src/
     index.ts                  lookup, the `useT` hook, language detection
 
   hooks/                      the React bindings for the engines
-  tests/                      259 tests
+  tests/                      269 tests
 ```
 
 **State versus derived data.** The store holds only choices — `"guitar6"`,
@@ -339,7 +339,25 @@ rather than merely reversed.
    read from an `AnalyserNode`, which is long enough to hold several periods of
    a 31 Hz low B.
 
-2. **Detection.** `detectPitch()` uses the McLeod normalised square difference
+2. **Conditioning.** The frame's mean is subtracted and anything below half
+   the lowest note being searched for is rolled off. A microphone with a DC
+   bias adds a constant that the level gate counts as signal and that then
+   dominates the correlation — before this was added, a 2% offset produced a
+   confident reading three octaves out. At the bass's lowest open string the
+   roll-off costs under a decibel.
+
+3. **Gating.** A frame is analysed only if it is louder than the room. The gate
+   follows the room rather than sitting at a fixed level: about 10 dB above the
+   **quietest** of the last four seconds, floored at −72 dBFS and capped at
+   −48 dBFS. The quietest frame rather than the average, because an average is
+   dragged up by the note being played and the gate then cuts the note off
+   during its own decay. A four-second warm-up at the floor, so someone who
+   opens the tuner and plays immediately is not gated by their own first note.
+   A ceiling, so a sustained note never becomes its own background. The gate is
+   not what rejects noise — the clarity threshold is, and pink and white noise
+   are rejected at every level tested.
+
+4. **Detection.** `detectPitch()` uses the McLeod normalised square difference
    function, the normalised cousin of autocorrelation. It takes the *first*
    strong peak rather than the tallest: a periodic signal correlates just as
    well at twice its period, and "tallest wins" is exactly what makes cheap
@@ -349,22 +367,29 @@ rather than merely reversed.
    interpolation, which brings the estimate to about a cent. A median filter
    over the last five frames keeps the needle from twitching.
 
-3. **Interpretation.** `analysis.ts` turns the frequency into a reading: the
+5. **Interpretation.** `analysis.ts` turns the frequency into a reading: the
    nearest chromatic note, and the deviation in cents from the nearest string of
    **the tuning currently selected** — so Drop C, E♭ standard or a fully custom
    tuning works with no special case. You can pin a specific string instead of
    letting it choose, and clicking a string also plays its reference pitch.
 
-4. **Display.** Note name, exact frequency, target frequency, signed cents, a
+6. **Display.** Note name, exact frequency, target frequency, signed cents, a
    needle, and the verdict written out in words ("Flat by 9 cents — tighten the
    string"), so nothing depends on colour alone. ±5 cents counts as in tune.
 
+**Sensitivity.** A string played softly used to register as silence: the level
+gate discarded signals the detector still read perfectly. It now detects a pluck
+at **1/500th of full strength** (−70 dBFS), 50 times quieter than before, with
+the pitch still accurate to a cent. Nothing about the detector changed — it was
+never being given the signal.
+
 Verified end to end in a real browser by feeding the application a synthesised
-guitar note as its microphone input. Thirteen cases — every open string of the
+guitar note as its microphone input. Seventeen cases — every open string of the
 guitar and the bass, a G string 18 cents flat, a B string 25 cents sharp, and
-Drop D's low string reading against D2 rather than E2 — were each identified
-correctly, and the detected frequency equalled the input to the two decimals the
-readout shows.
+Drop D's low string reading against D2 rather than E2, the same tone at a
+forty-fifth and a hundred-and-twentieth of the usual level, and a microphone
+with a 2% DC offset — were each identified correctly, and the detected frequency
+equalled the input to the two decimals the readout shows.
 
 ### The tuner camera
 
@@ -603,7 +628,7 @@ runs on defaults and says so.
 npm test
 ```
 
-**259 tests, all passing.** They cover the music-theory engine directly and the
+**269 tests, all passing.** They cover the music-theory engine directly and the
 application through its user interface.
 
 | Area | Tests | Examples of what is checked |
@@ -614,7 +639,7 @@ application through its user interface.
 | Scales (`scales.test.ts`) | 15 | relative modes sharing one pitch-class set; harmonic vs melodic minor; pentatonics; blues; symmetric scales; degree labels |
 | Chords (`chords.test.ts`) | 34 | every chord type's pitch classes; the voicing search finding real open shapes; **every returned shape verified to sound only the chord it claims**; shapes recalculated per tuning; power chords across 7 instrument/tuning combinations |
 | Audio (`audio.test.ts`) | 13 | rendered notes in tune within 5 cents across both instruments' full ranges and three sample rates; harmonic content (not a sine); decay; determinism |
-| Tuner (`tuner.test.ts`) | 24 | detection of every open string of every standard tuning; a 31 Hz low B; no octave errors; silence and noise rejected; cents deviation; targets following the current tuning |
+| Tuner (`tuner.test.ts`) | 34 | a string played softly, down to 1/500th of full strength and still accurate to a cent; a microphone with a DC offset; room noise and white noise still rejected at every level; the gate following the room, its warm-up, that a note cannot raise it, and its ceiling; the decibel signal meter; detection of every open string of every standard tuning; a 31 Hz low B; no octave errors; silence and noise rejected; cents deviation; targets following the current tuning |
 | Translations (`i18n.test.ts`) | 75 | every language covering every interface key, scale, chord, category and tuning id; nothing blank; every message English parameterises still parameterised elsewhere, and still substituting its arguments; no English prose left in the four CJK catalogues; browser-language detection, including `zh-TW`/`zh-HK`/`zh-MO` as Traditional and `zh-CN`/`zh-SG`/`zh` as Simplified |
 | Application (`app.test.tsx`) | 52 | both instruments; tuning changes recalculating the rendered neck; the custom-tuning editor; chord shapes recalculated per tuning; the Drop D one-finger power chord; down vs up strum ordering; muted strings silent; strum speed; microphone requested only in tuner mode and released on exit; view saved and restored; persistence; keyboard navigation |
 

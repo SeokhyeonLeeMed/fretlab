@@ -38,6 +38,54 @@ export function rmsOf(buf: Float32Array): number {
 }
 
 /**
+ * Remove the DC offset and anything below the instrument's range.
+ *
+ * Both matter more than they look. A microphone with a DC bias — common on
+ * built-in and USB inputs — adds a constant that the RMS gate counts as
+ * signal, so a silent room reads as loud, and that constant then dominates
+ * the correlation and produces a confident reading of the wrong note. Room
+ * rumble, a desk knock and a laptop fan do the same thing more gently.
+ * Subtracting the mean and rolling off below the lowest note the instrument
+ * can play leaves the RMS measuring what was actually played, which is what
+ * makes a low gate safe.
+ *
+ * Two one-pole sections at `cornerHz`, which is placed an octave below the
+ * lowest frequency of interest: at the lowest open string that costs under a
+ * decibel, and it is uniform across the frame, so the correlation is unchanged.
+ */
+export function removeRumble(buf: Float32Array, sampleRate: number, cornerHz: number): Float32Array {
+  const n = buf.length;
+  const out = new Float32Array(n);
+  if (n === 0) return out;
+
+  let mean = 0;
+  for (let i = 0; i < n; i++) mean += buf[i];
+  mean /= n;
+
+  // One-pole high-pass: y[i] = a * (y[i-1] + x[i] - x[i-1]).
+  const a = 1 / (1 + (2 * Math.PI * cornerHz) / sampleRate);
+  let xPrev = 0;
+  let yPrev = 0;
+  for (let i = 0; i < n; i++) {
+    const x = buf[i] - mean;
+    const y = a * (yPrev + x - xPrev);
+    out[i] = y;
+    xPrev = x;
+    yPrev = y;
+  }
+  xPrev = 0;
+  yPrev = 0;
+  for (let i = 0; i < n; i++) {
+    const x = out[i];
+    const y = a * (yPrev + x - xPrev);
+    out[i] = y;
+    xPrev = x;
+    yPrev = y;
+  }
+  return out;
+}
+
+/**
  * Low-pass then pick every `factor`-th sample.
  *
  * The filter is a cascade of four one-pole sections rather than one: a single
@@ -147,14 +195,23 @@ export function parabolicShift(yLeft: number, yPeak: number, yRight: number): nu
  *          tuner shows "listening" rather than inventing a note.
  */
 export function detectPitch(
-  buf: Float32Array,
+  input: Float32Array,
   sampleRate: number,
   options: DetectOptions = {},
 ): PitchResult | null {
-  const minFreq = options.minFreq ?? 25; // B0 on a 5-string bass is 30.87 Hz
-  const maxFreq = options.maxFreq ?? 1400; // above the 24th fret of a guitar
+  const minFreq = options.minFreq ?? 25; // a 31 Hz B0 is the lowest ever asked for
+  const maxFreq = options.maxFreq ?? 1400; // above the last fret of a guitar
   const clarityThreshold = options.clarityThreshold ?? 0.55;
-  const rmsThreshold = options.rmsThreshold ?? 0.006;
+  // Low enough to hear a string played softly, and far below a quiet room.
+  // Measured: a pluck stays perfectly detectable (clarity 0.97) more than an
+  // order of magnitude below the 0.006 this gate used to sit at, so the gate,
+  // not the detector, was what made the tuner deaf to a gentle pluck. The
+  // engine raises it to suit the room; see NoiseGate.
+  const rmsThreshold = options.rmsThreshold ?? 0.00025;
+
+  // Before anything is measured: a DC offset would otherwise be counted as
+  // signal by the gate and then swamp the correlation.
+  const buf = removeRumble(input, sampleRate, Math.max(8, minFreq / 2));
 
   const rms = rmsOf(buf);
   if (rms < rmsThreshold) return null;
@@ -267,6 +324,103 @@ export function detectPitch(
   const freq = sampleRate / lag;
   if (freq < minFreq || freq > maxFreq) return null;
   return { freq, clarity, rms };
+}
+
+/**
+ * Track the room's noise floor and set the gate from it.
+ *
+ * A fixed gate cannot be right for every room: set high enough to ignore a
+ * noisy one it goes deaf to a softly played string in a quiet one, which is
+ * the complaint this exists to answer. Set low enough for the quiet room it
+ * lets a steady hum through, and mains hum is periodic, so the detector
+ * reports it as a confident note sitting near the bass's A and D strings.
+ *
+ * Following the floor fixes both. The gate sits a fixed distance above
+ * whatever the background happens to be: in silence it drops to the absolute
+ * minimum and a gentle pluck registers; with hum or a fan it rises above
+ * them, and only a note actually louder than the room gets through.
+ *
+ * The floor is the quietest the last few seconds have been, rather than an
+ * average. That distinction is the whole design. An average is dragged up by
+ * the note being played, and the gate then rises and cuts the note off
+ * halfway through its own decay — measured, before this was a minimum: a bass
+ * note was gated at 0.5 s while still four times louder than the floor. A
+ * minimum cannot be fooled that way, because a note is a loud interval
+ * *between* quiet ones, while hum or a fan is present in every frame
+ * including the quietest.
+ */
+export class NoiseGate {
+  /**
+   * Quietest gate ever used, about -72 dBFS.
+   *
+   * It can sit this low because the gate is not what rejects noise — the
+   * clarity threshold is. Measured: pink room noise and white noise are
+   * rejected at every level up to -35 dBFS, because neither is periodic,
+   * while a pluck this quiet still scores 0.88. The gate exists only to stop
+   * the detector working on nothing at all.
+   */
+  static readonly MIN_THRESHOLD = 0.00025;
+  /**
+   * However loud the room, never demand more than this (about -48 dBFS).
+   *
+   * The ceiling is what keeps a *sustained* sound audible. The floor is the
+   * quietest of the recent frames, so a tone held longer than the window —
+   * a bowed note, a tuning fork, a reference pitch from another app — would
+   * eventually become its own background and gate itself off. Capping the
+   * gate well below any real playing level stops that, while still sitting
+   * above the mains hum and fan noise the gate exists to reject.
+   */
+  static readonly MAX_THRESHOLD = 0.004;
+  /** How far above the floor a signal must sit. ~10 dB. */
+  static readonly HEADROOM = 3;
+
+  private history: number[] = [];
+
+  /**
+   * @param window how many frames to look back over. At the engine's 24 Hz
+   *        this is four seconds: longer than a pluck stays above the floor,
+   *        so a note never fills the window and never becomes the floor.
+   */
+  constructor(private window = 96) {}
+
+  /** Feed one frame's level. Call once per frame, before detecting. */
+  update(rms: number): void {
+    this.history.push(rms);
+    if (this.history.length > this.window) this.history.shift();
+  }
+
+  /**
+   * True once there is a full window to judge from.
+   *
+   * Until then the gate stays at its most sensitive. The alternative — adapt
+   * from whatever few frames have arrived — is actively wrong: someone who
+   * opens the tuner and plays straight away would have the first frames of
+   * their own note taken for the room, and the gate would then shut on the
+   * note that set it.
+   */
+  get ready(): boolean {
+    return this.history.length >= this.window;
+  }
+
+  /** The RMS gate to use for the next frame. */
+  get threshold(): number {
+    if (!this.ready) return NoiseGate.MIN_THRESHOLD;
+    return Math.min(
+      NoiseGate.MAX_THRESHOLD,
+      Math.max(NoiseGate.MIN_THRESHOLD, this.noiseFloor * NoiseGate.HEADROOM),
+    );
+  }
+
+  /** The estimated background level: the quietest of the recent frames. */
+  get noiseFloor(): number {
+    let min = Infinity;
+    for (const v of this.history) if (v < min) min = v;
+    return Number.isFinite(min) ? min : 0;
+  }
+
+  reset(): void {
+    this.history = [];
+  }
 }
 
 /**

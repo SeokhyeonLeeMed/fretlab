@@ -23,6 +23,13 @@ const cases = [
   { name: 'guitar G3, 18 cents flat', freq: E2 * semis(15) * Math.pow(2, -18 / 1200), instrument: null, tuning: null, note: 'G3', cents: -18 },
   { name: 'guitar B3, 25 cents sharp', freq: E2 * semis(19) * Math.pow(2, 25 / 1200), instrument: null, tuning: null, note: 'B3', cents: 25 },
   { name: 'Drop D low string', freq: E2 * semis(-2), instrument: null, tuning: 'drop-d', note: 'D2', cents: 0 },
+  // Played softly. The default amplitude below is 0.18; these are a string
+  // touched gently, and the quietest the detector will answer at all.
+  { name: 'guitar A2, played softly', freq: E2 * semis(5), instrument: null, tuning: null, note: 'A2', cents: 0, gain: 0.004 },
+  { name: 'guitar A2, very soft', freq: E2 * semis(5), instrument: null, tuning: null, note: 'A2', cents: 0, gain: 0.0015 },
+  { name: 'bass E1, played softly', freq: E2 * semis(-12), instrument: ['Bass'], tuning: null, note: 'E1', cents: 0, gain: 0.004 },
+  // A microphone with a DC offset: level that is not sound.
+  { name: 'guitar D3 with a DC offset', freq: E2 * semis(10), instrument: null, tuning: null, note: 'D3', cents: 0, dc: 0.02 },
 ];
 
 
@@ -39,7 +46,7 @@ for (const c of cases) {
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 
-  await page.addInitScript((freq) => {
+  await page.addInitScript(({ freq, gain, dc }) => {
     navigator.mediaDevices.getUserMedia = async () => {
       const ac = new AudioContext();
       await ac.resume();
@@ -52,7 +59,7 @@ for (const c of cases) {
       for (let i = 0; i < d.length; i++) {
         let v = 0;
         for (let h = 1; h <= 8; h++) v += (1 / h) * Math.sin((2 * Math.PI * f * h * i) / ac.sampleRate + h * 0.7);
-        d[i] = v * 0.18;
+        d[i] = v * gain + dc;
       }
       const src = ac.createBufferSource();
       src.buffer = buf;
@@ -63,7 +70,7 @@ for (const c of cases) {
       window.__fakeFreq = f;
       return dest.stream;
     };
-  }, c.freq);
+  }, { freq: c.freq, gain: c.gain ?? 0.18, dc: c.dc ?? 0 });
 
   await page.goto('http://localhost:4173/', { waitUntil: 'networkidle' });
   if (c.instrument) await page.getByRole('button', { name: new RegExp(`^${c.instrument[0]}$`) }).click();

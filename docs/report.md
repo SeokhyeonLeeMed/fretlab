@@ -22,7 +22,7 @@ domain.
 | **Audio** | Karplus–Strong plucked-string synthesis, Web Audio API, no samples |
 | **Tuner** | Microphone pitch detection, accurate to about one cent |
 | **Languages** | English, 한국어, 日本語, 简体中文, 繁體中文, Español |
-| **Tests** | 259, all passing |
+| **Tests** | 269, all passing |
 | **Production bundle** | 393 kB JavaScript (131 kB gzipped), 16 kB CSS |
 | **Deployment** | GitHub Pages workflow included; Cloudflare, Netlify, Vercel configs included |
 | **Cost to run** | Nothing. No backend, no account, no domain. |
@@ -40,6 +40,22 @@ tunings correct rather than approximately correct.
 # 2. What was built
 
 ## 2.0 Revisions
+
+### Revision 6
+
+- **The tuner now hears a string played softly.** It was going deaf long before
+  the detector did: a fixed level gate discarded signals the pitch detector
+  still read perfectly, so a gentle pluck, or a microphone across the room,
+  registered as silence. The gate now follows the room instead of sitting at a
+  fixed level, and it starts 34 dB lower. Measured on the same synthesised
+  plucks: detection down to **1/50th of the level it previously needed**, with
+  the pitch still accurate to a cent. Section 7.2 has the numbers.
+- **A microphone with a DC offset no longer produces a confident wrong note.**
+  An offset is level without being sound: it passed the old gate and then
+  dominated the correlation. Measured before the fix: a reading **3780 cents**
+  — more than three octaves — from the right answer, at 0.95 confidence.
+- **The signal meter is in decibels**, so a quietly played string visibly moves
+  it instead of leaving it pinned at nothing.
 
 ### Revision 5
 
@@ -422,7 +438,47 @@ strum and an up strum sound genuinely different rather than merely reversed.
    from an `AnalyserNode`, long enough to contain several periods of a 31 Hz low
    B.
 
-2. **Detection.** The McLeod normalised square difference function, the
+2. **Conditioning.** The frame's mean is subtracted and anything below half
+   the lowest note being searched for is rolled off. This is not cosmetic: a
+   microphone with a DC bias — common on built-in and USB inputs — adds a
+   constant that the level gate counts as signal, so a silent room reads as
+   loud, and the constant then dominates the correlation. Before this was
+   added, a 2% offset produced a confident reading three octaves from the
+   truth. At the bass's lowest open string the roll-off costs under a decibel,
+   and uniformly across the frame, so the correlation is untouched.
+
+3. **Gating.** A frame is only analysed if it is louder than the room. The gate
+   is not a fixed number: it sits a fixed distance (about 10 dB) above the
+   **quietest** of the last four seconds, between a floor of −72 dBFS and a
+   ceiling of −48 dBFS. Each of those choices answers a specific failure:
+
+   - *Why follow the room at all.* A fixed gate cannot suit both a quiet room
+     and a noisy one. Set high enough for the noisy room — which is where it
+     was — the tuner ignores a softly played string. Set low enough for the
+     quiet room, a steady mains hum gets through, and hum is periodic, so the
+     detector reports it as a confident note sitting between the bass's A and
+     D strings.
+   - *Why the quietest frame and not the average.* An average is dragged up by
+     the note being played, and the gate then rises and cuts the note off
+     during its own decay. Measured, before this was a minimum: a bass note
+     gated at 0.5 s while still four times louder than the floor. A note is a
+     loud interval between quiet ones; a hum or a fan is in every frame,
+     including the quietest.
+   - *Why a warm-up.* For the first four seconds the gate stays at its floor.
+     Someone who opens the tuner and plays immediately would otherwise have
+     the first frames of their own note taken for the room.
+   - *Why a ceiling.* The floor is the quietest recent frame, so a tone held
+     for longer than the window would eventually become its own background
+     and gate itself off. The ceiling sits well below any real playing level,
+     so a sustained note stays audible indefinitely — verified over 20 s — and
+     still above the hum the gate is there to reject.
+
+   The gate is deliberately *not* what rejects noise. That is the clarity
+   threshold's job, and it does it well: pink room noise and white noise are
+   rejected at every level tested, up to −35 dBFS, because neither is
+   periodic.
+
+4. **Detection.** The McLeod normalised square difference function, the
    normalised cousin of autocorrelation, is evaluated and the **first** strong
    peak is taken rather than the tallest. This is the detail that matters: a
    periodic signal correlates just as well at twice its period, and "tallest
@@ -432,13 +488,13 @@ strum and an up strum sound genuinely different rather than merely reversed.
    sample rate with parabolic interpolation, which brings the estimate to about
    a cent. A median filter over the last five frames stops the needle twitching.
 
-3. **Interpretation.** The frequency becomes a reading: the nearest chromatic
+5. **Interpretation.** The frequency becomes a reading: the nearest chromatic
    note, and the cents deviation from the nearest string of **the tuning
    currently selected**. Drop C, E♭ standard and fully custom tunings therefore
    work with no special case. A string can be pinned instead of auto-selected,
    and clicking a string also plays its reference pitch.
 
-4. **Display.** Note name, exact detected frequency, target frequency, signed
+6. **Display.** Note name, exact detected frequency, target frequency, signed
    cents, a needle, and the verdict written out in words — "Flat by 9 cents —
    tighten the string" — so nothing depends on colour alone. ±5 cents counts as
    in tune.
@@ -465,11 +521,42 @@ operating system's audio driver is the application's real code.
 | 250.50 Hz (B3, sharp) | 250.50 Hz | B3, +24.8 cents | ▼ Sharp by 25 cents — loosen the string |
 | 73.50 Hz, in Drop D | 73.50 Hz | D2, +2.0 cents | ✓ In tune — D2, targeting D2 rather than E2 |
 
+| 110.00 Hz at 1/45th the level | 110.00 Hz | A2, +0.1 cents | ✓ In tune — A2 |
+| 110.00 Hz at 1/120th the level | 110.00 Hz | A2, +0.1 cents | ✓ In tune — A2 |
+| 41.20 Hz at 1/45th the level | 41.00 Hz | E1, −8.6 cents | ▲ Flat by 9 cents |
+| 147.00 Hz over a 2% DC offset | 147.00 Hz | D3, +2.0 cents | ✓ In tune — D3 |
+
+The last four rows are the revision 6 work. The three quiet ones are the same
+tone at a fraction of the amplitude the others use, and they are read **just as
+accurately**, to a tenth of a cent — quiet does not mean approximate. The DC row
+is the case that used to give a reading three octaves out.
+
 **The detected frequency equals the input in every case**, to the two decimal
 places the readout shows. The deviations in the table are the application
 correctly reporting how far the *input* sits from the target: 41.00 Hz really is
 8.6 cents below E1, and the last row confirms the targets follow the tuning
 rather than assuming standard.
+
+### How quiet is quiet enough
+
+Measured by feeding whole synthesised plucks, from the same model the
+application plays through, at falling amplitudes over a microphone noise floor:
+
+| Pluck level | Before | After |
+| --- | --- | --- |
+| Full strength | detected | detected |
+| 1/10th (−40 dBFS) | detected | detected |
+| 1/33rd (−50 dBFS) | **silence** | detected, clarity 0.97 |
+| 1/100th (−57 dBFS) | **silence** | detected, clarity 0.97 |
+| 1/200th (−62 dBFS) | **silence** | detected, clarity 0.97 |
+| 1/500th (−70 dBFS) | **silence** | detected, clarity 0.87–0.95 |
+| 1/1000th (−75 dBFS) | silence | silence |
+
+The pitch is correct to within a cent at every level that is detected at all,
+on the guitar's lowest and highest strings and the bass's. The improvement is
+**a factor of 50, about 34 dB** — and none of it came from making the detector
+cleverer. The detector was always able to read these signals; it was never
+being given them.
 
 ## 7.3 The camera move
 
@@ -611,7 +698,7 @@ sets the document language, and survives a reload.
 
 # 9. Testing results
 
-`npm test` — **259 tests, 9 files, all passing** in about a minute.
+`npm test` — **269 tests, 9 files, all passing** in about a minute.
 
 | Area | Tests | What is checked |
 | --- | --- | --- |
@@ -621,7 +708,7 @@ sets the document language, and survives a reload.
 | Scales | 15 | relative modes sharing one pitch-class set; harmonic vs melodic minor; pentatonics; blues; symmetric scales; degree labels |
 | Chords | 34 | every chord type's pitch classes; the solver finding real open shapes; **every returned shape verified to sound only the chord it claims**; shapes recalculated per tuning; power chords across seven instrument/tuning combinations |
 | Audio | 13 | rendered notes in tune within 5 cents across both instruments' ranges and three sample rates; harmonic content; decay; determinism |
-| Tuner | 24 | every open string of every standard tuning; a 31 Hz low B; no octave errors; silence and noise rejected; cents; targets following the current tuning |
+| Tuner | 34 | a string played softly, down to 1/500th of full strength, and still to a cent; a DC-offset microphone; room noise and white noise still rejected at every level; the gate following the room, warming up, not being raised by a note, and its ceiling; the decibel signal meter; every open string of every standard tuning; a 31 Hz low B; no octave errors; silence and noise rejected; cents; targets following the current tuning |
 | Translations | 75 | every language covering every interface key, scale, chord, category and tuning; no blank values; parameterised messages still parameterised and still substituting; no English left in the CJK catalogues; browser-language detection, including the Chinese variants |
 | Application | 52 | both instruments; tuning changes recalculating the rendered neck; the custom-tuning editor; chord shapes per tuning; the Drop D one-finger power chord; down vs up strum ordering; muted strings silent; strum speed; microphone requested only in tuner mode and released on exit; view saved and restored; persistence; keyboard navigation |
 
